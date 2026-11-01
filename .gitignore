@@ -1,0 +1,7 @@
+node_modules/
+release/
+stage/
+dist/
+model/
+smoke-shots/
+*.log

@@ -1,0 +1,120 @@
+<title>Gofer Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: a faux desktop fills the viewport; the creature overlay (canvas + card + bubbles) floats over it,
+   using the right edge as its road exactly as the Windows build does. */
+:root {
+  --wall-a: #cfd9e6; --wall-b: #e9eef4; --wall-c: #f6f1e7;
+  --win: #fbfaf7; --win-fg: #2a2520; --win-dim: #7a7267; --win-bar: #ebe6dc; --win-edge: rgba(40,30,20,0.18);
+  --ctl: rgba(255,255,255,0.78); --ctl-fg: #2a2520; --ctl-edge: rgba(40,30,20,0.16); --ctl-accent: #c48a2c;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --wall-a: #1c2230; --wall-b: #232b3a; --wall-c: #2c2a33;
+  --win: #1f1d1b; --win-fg: #ece6da; --win-dim: #a39b8e; --win-bar: #2a2724; --win-edge: rgba(255,255,255,0.12);
+  --ctl: rgba(30,27,24,0.82); --ctl-fg: #ece6da; --ctl-edge: rgba(255,255,255,0.14); --ctl-accent: #f1c86b;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --wall-a: #1c2230; --wall-b: #232b3a; --wall-c: #2c2a33;
+  --win: #1f1d1b; --win-fg: #ece6da; --win-dim: #a39b8e; --win-bar: #2a2724; --win-edge: rgba(255,255,255,0.12);
+  --ctl: rgba(30,27,24,0.82); --ctl-fg: #ece6da; --ctl-edge: rgba(255,255,255,0.14); --ctl-accent: #f1c86b;
+  color-scheme: dark; }
+
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var(--wall-c)); color: var(--win-fg); font-family: var(--font-body); }
+#desktop { position: fixed; inset: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0; }
+
+.window {
+  position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); top: 54px; width: min(620px, calc(100vw - 120px));
+  height: min(62vh, 520px); background: var(--win); color: var(--win-fg); border: 1px solid var(--win-edge); border-radius: 10px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column; min-width: 0;
+}
+.titlebar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--win-bar); font-size: 12px; color: var(--win-dim); border-bottom: 1px solid var(--win-edge); }
+.titlebar .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--win-fg); }
+.titlebar .dots { letter-spacing: 6px; }
+.doc { padding: 22px 26px; overflow: auto; flex: 1; min-width: 0; }
+.doc h1 { font-family: var(--font-display); font-size: 22px; margin: 0 0 12px; text-wrap: balance; }
+.doc p { max-width: 62ch; line-height: 1.55; margin: 0 0 12px; font-size: 14px; }
+.doc p.dim { color: var(--win-dim); font-size: 12.5px; }
+
+.controls {
+  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: max(14px, env(safe-area-inset-bottom, 0px)); z-index: 3;
+  display: flex; flex-wrap: wrap; gap: 8px; max-width: calc(100vw - 150px); align-items: center;
+}
+.controls button {
+  font: 600 13px var(--font-body); color: var(--ctl-fg); background: var(--ctl); border: 1px solid var(--ctl-edge); border-radius: 999px;
+  padding: 8px 14px; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.controls button:hover { border-color: var(--ctl-accent); }
+.controls button:focus-visible { outline: 2px solid var(--ctl-accent); outline-offset: 2px; }
+.controls .tally { font-size: 12px; color: var(--ctl-fg); opacity: 0.8; padding: 6px 10px; background: var(--ctl); border: 1px solid var(--ctl-edge); border-radius: 999px; font-variant-numeric: tabular-nums; }
+.intro { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); right: 90px; z-index: 3; font-size: 12.5px; color: var(--win-fg); opacity: 0.85; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.intro b { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 60px)); z-index: 7; background: var(--ctl); color: var(--ctl-fg); border: 1px solid var(--ctl-edge); border-radius: 10px; padding: 8px 12px; font-size: 13px; opacity: 0; transition: opacity 200ms; pointer-events: none; max-width: calc(100vw - 40px); }
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #card, .toast { transition: none; } }
+
+/* ---- overlay styles (same as the Windows build) ---- */
+{{CSS}}
+#stage { pointer-events: none; z-index: 2; }
+#stage.live { pointer-events: auto; }
+html { background: var(--wall-b); }
+body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var(--wall-c)); }
+</style>
+
+<div id="desktop">
+  <div class="intro"><b>Gofer</b><span>a creature that fetches the file you were about to go looking for</span></div>
+  <div class="window" id="docwin">
+    <div class="titlebar"><span class="t" id="doctitle"></span><span class="dots">–▢✕</span></div>
+    <div class="doc" id="docbody"></div>
+  </div>
+  <div class="controls">
+    <button id="btnAsk" type="button">Send Gofer for something</button>
+    <button id="btnSwitch" type="button">Switch document</button>
+    <span class="tally" id="tally">0 fetches</span>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<canvas id="stage"></canvas>
+<div id="hello" class="bubble hidden">
+  <div class="bubble-body">Tap me to send me for something.<br><span class="dim">On Windows: right-click me for settings, drag me to move my spot.</span></div>
+</div>
+<div id="ask" class="bubble hidden">
+  <div class="bubble-body">
+    <input id="askInput" type="text" placeholder="What should I fetch?" autocomplete="off" spellcheck="false">
+    <div class="hint">Enter to send · Esc to cancel</div>
+  </div>
+</div>
+<div id="status" class="pill hidden"></div>
+<div id="card" class="hidden">
+  <div class="card-head">
+    <div id="cardIcon" class="ext">TXT</div>
+    <div class="card-title">
+      <div id="cardName" class="name">file.txt</div>
+      <div id="cardMeta" class="meta">Documents · 3d ago</div>
+    </div>
+  </div>
+  <div id="cardReason" class="reason hidden"></div>
+  <div id="cardSnippet" class="snippet"></div>
+  <div id="cardTerms" class="terms"></div>
+  <div class="card-foot">
+    <span>tap to open</span><span class="sep">·</span><span>tap me to try another</span><span class="sep">·</span><span>ignore to dismiss</span>
+  </div>
+  <div class="timer"><div id="cardTimer" class="timer-fill"></div></div>
+</div>
+
+<script>
+{{LIBS}}
+</script>
+<script>
+{{MOCK}}
+</script>
+<script>
+{{RENDERER}}
+</script>
+<script>
+{{DEMO}}
+</script>

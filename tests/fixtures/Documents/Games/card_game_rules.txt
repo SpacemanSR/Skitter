@@ -1,0 +1,2 @@
+Card combination game. Draw five cards, combine suits into runs, play the probabilities.
+Scoring: runs beat pairs; a full set is worth triple. Risk ladder: every redraw costs one card.

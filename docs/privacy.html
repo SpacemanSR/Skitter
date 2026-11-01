@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gofer Privacy Policy</title>
+<style>
+  :root { --bg: #f7f9fc; --fg: #1f2633; --dim: #5d6779; --rule: #d9e1ec; --accent: #2e3b62; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161a22; --fg: #e8ecf3; --dim: #a3adbd; --rule: #2c3442; --accent: #9fb3dc; color-scheme: dark; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  main { max-width: 68ch; margin: 0 auto; padding: 48px max(20px, env(safe-area-inset-left)) 80px; }
+  h1 { font-size: 30px; margin: 0 0 4px; color: var(--accent); }
+  h2 { font-size: 19px; margin: 36px 0 8px; padding-top: 16px; border-top: 1px solid var(--rule); }
+  .meta { color: var(--dim); font-size: 14px; margin-bottom: 28px; }
+  li { margin: 4px 0; }
+  code { font: 14px Consolas, monospace; background: var(--rule); padding: 1px 5px; border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  td, th { text-align: left; vertical-align: top; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+</style>
+</head>
+<body>
+<main>
+<h1>Gofer Privacy Policy</h1>
+<div class="meta">Effective November 1, 2026 · Gofer is made by Sean Rogers (Mr. Interactive)</div>
+
+<p>Gofer is a desktop app for Windows. A small character lives at the edge of your screen and brings you files from your own computer that relate to what you are working on. To do that it has to look at your files and at what you are doing. This page explains exactly what it looks at, what it keeps, and where that goes.</p>
+
+<p><strong>The short version: everything Gofer reads and stores stays on your computer.</strong> Gofer has no account, no servers that receive your data, no analytics and no advertising.</p>
+
+<h2>What Gofer reads</h2>
+<table>
+  <tr><th>What</th><th>Why</th></tr>
+  <tr><td>Files in the folders you allow (by default your Documents, Desktop and Downloads)</td><td>To build a searchable index so it can find the right file. For Word, PowerPoint, Excel, PDF, text and similar files it reads the text; for other files (images, video, project files) it uses only the file name. Files that OneDrive keeps online-only are indexed by name and never downloaded.</td></tr>
+  <tr><td>The title of the window in front</td><td>To work out which document you are working on.</td></tr>
+  <tr><td>The text near your cursor in the window in front</td><td>To find files related to what you are writing. Gofer never reads password fields.</td></tr>
+  <tr><td>Text you copy to the clipboard</td><td>As an extra hint about what you are working on.</td></tr>
+  <tr><td>Windows' list of recently opened files</td><td>To learn which files you tend to use together.</td></tr>
+</table>
+
+<h2>What Gofer stores, and where</h2>
+<p>Everything is stored in <code>%APPDATA%\Gofer</code> on your computer:</p>
+<ul>
+  <li><strong>An index of your files:</strong> file names and locations, the words in each file, short passages of text, and numeric summaries of those passages used for search by meaning.</li>
+  <li><strong>A history of files you opened,</strong> with times, used to learn which files go together.</li>
+  <li><strong>A history of what Gofer brought you</strong> and whether you kept it, used to improve his choices. Each record also keeps the window title and up to a few hundred characters of the text you had copied or were typing at the time. That text and those titles are erased automatically after 90 days; the numeric learning data stays.</li>
+  <li><strong>Your settings</strong> and a diagnostic log.</li>
+</ul>
+<p>Window titles, cursor text and clipboard text are otherwise held only in memory while Gofer is running.</p>
+
+<h2>What leaves your computer</h2>
+<ul>
+  <li><strong>Nothing you work on.</strong> No file contents, file names, window titles, typed or copied text, or usage history is sent anywhere.</li>
+  <li><strong>Update checks.</strong> If you installed Gofer from its website, it periodically asks GitHub whether a newer version exists and downloads it. GitHub sees your IP address and the app version, as with any download. Copies installed from the Microsoft Store are updated by the Store instead.</li>
+  <li><strong>When you open a file Gofer brought you,</strong> Windows opens it in your usual app; whatever that app does is governed by its own policy.</li>
+</ul>
+
+<h2>Your control</h2>
+<ul>
+  <li>Choose which folders Gofer may read: right-click Gofer › <em>Choose folders…</em></li>
+  <li>Stop him going looking on his own: right-click › untick <em>Go looking on his own</em>.</li>
+  <li>Turn off search by meaning: right-click › untick <em>Search by meaning</em>.</li>
+  <li>Delete everything Gofer has stored: quit Gofer and delete the <code>%APPDATA%\Gofer</code> folder. Uninstalling the app removes the program but leaves this folder, so your history survives a reinstall; delete it yourself if you want it gone.</li>
+</ul>
+
+<h2>Children</h2>
+<p>Gofer is a general-purpose productivity tool and is not directed at children under 13.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes, the new version will be posted on this page with a new effective date, and material changes will be noted in the release notes of the version that introduces them.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy: <strong>[contact email]</strong></p>
+</main>
+</body>
+</html>

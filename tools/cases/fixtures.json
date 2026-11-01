@@ -1,0 +1,12 @@
+[
+  { "task": "harvest market deck", "expect": "harvest_market_deck.pptx" },
+  { "task": "how much will the event cost to put on", "expect": "market_budget.xlsx" },
+  { "task": "riverfest show deliverables", "expect": "Riverfest_run_of_show.docx" },
+  { "task": "rules for the card thing", "expect": "card_game_rules.txt" },
+  { "task": "the game where you draft your pieces", "expect": "tiny_kingdoms_format.md" },
+  { "task": "arcade shooter where old satellites become towers", "expect": "asteroid_td_roguelike.pdf" },
+  { "task": "notes on the tides", "expect": "old_notes_tidal_steps.txt" },
+  { "task": "questions for the interview episode", "expect": "podcast_prep_notes.txt" },
+  { "task": "lighthouse puzzle game", "expect": "LANTERN_KEEPER_design.md" },
+  { "mode": "auto", "title": "Re: sponsor - Gmail", "cleanTitle": "Re: sponsor", "focusedText": "Before we lock the bakery partnership I need to know how the 32 vendor stalls and two stages are laid out.", "expect": "harvest_market_pitch.txt" }
+]

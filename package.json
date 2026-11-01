@@ -1,0 +1,27 @@
+{
+  "name": "gofer",
+  "productName": "Gofer",
+  "version": "0.2.3",
+  "description": "A little yellow robot who fetches the file you were about to go looking for.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "electron-updater": "^6.8.11",
+    "onnxruntime-web": "^1.31.1",
+    "pdf-parse": "^2.4.5",
+    "@napi-rs/canvas": "^0.1.80"
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "^26.18.0",
+    "resedit": "^2.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SpacemanSR/gofer.git"
+  }
+}

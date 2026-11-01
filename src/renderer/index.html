@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Gofer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div id="hello" class="bubble hidden">
+    <div class="bubble-body">Click me to send me for something.<br><span class="dim">Right-click me for settings. Drag me to move my spot.</span></div>
+  </div>
+
+  <div id="ask" class="bubble hidden">
+    <div class="bubble-body">
+      <input id="askInput" type="text" placeholder="What should I fetch?" autocomplete="off" spellcheck="false">
+      <div class="hint">Enter to send · Esc to cancel</div>
+    </div>
+  </div>
+
+  <div id="status" class="pill hidden"></div>
+
+  <div id="card" class="hidden">
+    <div id="cardPreview" class="preview hidden"><img id="cardImg" alt=""><div id="cardPreviewNote" class="preview-note hidden"></div></div>
+    <div class="card-head">
+      <div id="cardIcon" class="ext">TXT</div>
+      <div class="card-title">
+        <div id="cardName" class="name">file.txt</div>
+        <div id="cardMeta" class="meta">Documents · 3d ago</div>
+      </div>
+    </div>
+    <div id="cardReason" class="reason hidden"></div>
+    <div id="cardSnippet" class="snippet"></div>
+    <div id="cardTerms" class="terms"></div>
+    <div class="card-foot">
+      <span>click to open</span><span class="sep">·</span><span>click me to try another</span><span class="sep">·</span><span>right-click to reveal</span>
+    </div>
+    <div class="timer"><div id="cardTimer" class="timer-fill"></div></div>
+  </div>
+
+  <script src="creature.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
