@@ -366,7 +366,7 @@ async function smokeTest() {
   await shot('07-presenting');
   await sleep(1500); await shot('08-preview');
   await js("document.getElementById('card').classList.add('wide')"); await sleep(600); await shot('09-wide');
-  await js("document.getElementById('card').click()");
+  await js("(() => { const k = document.getElementById('cardName'); for (const t of ['mousedown', 'mouseup']) k.dispatchEvent(new MouseEvent(t, { bubbles: true, button: 0 })); })()");
   await sleep(800);
   await refreshStats();
   log.debug('[smoke] stats', JSON.stringify({ count: engineStats.count, semantic: engineStats.semantic, embedded: engineStats.embeddedChunks, summary: engineStats.summary }));
