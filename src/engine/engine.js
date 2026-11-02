@@ -1,5 +1,5 @@
 'use strict';
-/* Gofer's engine. Runs in a background process (see worker.js) so indexing never stalls the creature.
+/* Skitter's engine. Runs in a background process (see worker.js) so indexing never stalls the creature.
    - SQLite full-text index (no document cap), incremental scans, live folder watching
    - chunk-level local embeddings, filled in the background, newest files first
    - hybrid candidate generation: keywords ∪ meaning ∪ opened-together

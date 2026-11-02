@@ -1,4 +1,4 @@
-/* Gofer — the creature, drawn with canvas primitives.
+/* Skitter — the creature, drawn with canvas primitives.
    Shared between the Electron renderer and the web demo (UMD).
    Local coordinate convention: origin = feet center, +y = toward the feet, +x = facing direction. */
 (function (root, factory) {
@@ -46,7 +46,7 @@
     ctx.restore();
   }
 
-  /* The Gofer: a little yellow wall crawler. Dome body, one big eye, four legs with suction-cup feet,
+  /* The Skitter: a little yellow wall crawler. Dome body, one big eye, four legs with suction-cup feet,
      and a front claw that carries the file. Drawn in profile; origin = feet center, +x = facing.
      p: { facing:+1|-1, walk:phase|null, carrying, blink:0..1, pose, squash, lookDir:-1..1, armRaise:0..1, paperAngle, t } */
   const M = { line: '#2B2420', metal: '#5B6270', metalDark: '#3E4450', joint: '#8A93A3', cup: '#E4572E', eye: '#FBFAF5', pupil: '#1F2533', glow: '#7FF0E0', bodyDark: '#C99A0E', bodyLight: '#FFE586' };

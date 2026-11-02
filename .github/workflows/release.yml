@@ -1,4 +1,4 @@
-# Gofer release pipeline (Windows).
+# Skitter release pipeline (Windows).
 #   Push to main / open a PR  → test + build, artifacts attached to the run (nothing published)
 #   Push a tag like v0.3.0     → test + build + sign + publish the GitHub Release (auto-update source)
 #                                + Microsoft Store package when the STORE_* variables are set
@@ -91,15 +91,15 @@ jobs:
         run: node tools/build-win.js --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
 
       - name: Smoke test the packaged app
-        run: node tools/smoke.js release/win-unpacked/Gofer.exe
+        run: node tools/smoke.js release/win-unpacked/Skitter.exe
 
       - name: Check the signature
         if: env.AZURE_SIGNING_ACCOUNT != ''
         shell: pwsh
         run: |
-          $sig = Get-AuthenticodeSignature "release/win-unpacked/Gofer.exe"
-          Write-Host "Gofer.exe: $($sig.Status) — $($sig.SignerCertificate.Subject)"
-          if ($sig.Status -ne 'Valid') { throw "Gofer.exe is not validly signed" }
+          $sig = Get-AuthenticodeSignature "release/win-unpacked/Skitter.exe"
+          Write-Host "Skitter.exe: $($sig.Status) — $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') { throw "Skitter.exe is not validly signed" }
           Get-ChildItem release/*.exe | ForEach-Object { $s = Get-AuthenticodeSignature $_.FullName; Write-Host "$($_.Name): $($s.Status)"; if ($s.Status -ne 'Valid') { throw "$($_.Name) is not validly signed" } }
 
       - name: Build Microsoft Store package

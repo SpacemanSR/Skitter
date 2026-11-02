@@ -1,5 +1,5 @@
 'use strict';
-/* Build Gofer for Windows.
+/* Build Skitter for Windows.
      node tools/build-win.js                         installer + portable zip (unsigned unless Azure vars are set)
      node tools/build-win.js --publish always        …and upload them to the GitHub Release for this version
      node tools/build-win.js --store                 Microsoft Store package (.appx/MSIX; the Store signs it)
@@ -33,12 +33,12 @@ else sh('node tools/fetch-model.js' + (process.env.CI && fs.existsSync(path.join
 rm(STAGE); fs.mkdirSync(STAGE);
 for (const d of ['src', 'assets', 'model']) fs.cpSync(path.join(ROOT, d), path.join(STAGE, d), { recursive: true });
 fs.writeFileSync(path.join(STAGE, 'package.json'), JSON.stringify({
-  name: 'gofer', productName: 'Gofer', version: pkg.version, description: pkg.description, author: { name: 'Mr. Interactive' }, license: 'UNLICENSED',
+  name: 'skitter', productName: 'Skitter', version: pkg.version, description: pkg.description, author: { name: 'Mr. Interactive' }, license: 'UNLICENSED',
   main: 'src/main.js', dependencies: pkg.dependencies, repository: pkg.repository
 }, null, 2));
 sh('npm install --omit=dev --os=win32 --cpu=x64 --no-audit --no-fund --no-package-lock', STAGE);
 
-// 2) prune runtime files Gofer never loads
+// 2) prune runtime files Skitter never loads
 const ortDist = path.join(STAGE, 'node_modules', 'onnxruntime-web', 'dist');
 const keep = new Set(['ort.node.min.js', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']);
 for (const f of fs.readdirSync(ortDist)) if (!keep.has(f)) rm(path.join(ortDist, f));
@@ -54,29 +54,29 @@ if (ON_WINDOWS && !STORE) console.log(azure ? '  • signing with Azure Artifact
 
 const icon = path.join(ROOT, 'buildres', 'icon.ico');
 const config = {
-  appId: 'com.mrinteractive.gofer', productName: 'Gofer', copyright: 'Mr. Interactive',
+  appId: 'com.mrinteractive.skitter', productName: 'Skitter', copyright: 'Mr. Interactive',
   directories: { app: STAGE, output: path.join(ROOT, 'release'), buildResources: path.join(ROOT, 'buildres') },
   electronVersion: require(path.join(ROOT, 'node_modules', 'electron', 'package.json')).version,
   asar: false, npmRebuild: false, nodeGypRebuild: false, buildDependenciesFromSource: false,
   publish: ghRepo.length === 2 && ghRepo[0] ? [{ provider: 'github', owner: ghRepo[0], repo: ghRepo[1], releaseType: 'release' }] : null,
   win: {
     target: STORE ? [{ target: 'appx', arch: ['x64'] }] : (ON_WINDOWS ? [{ target: 'nsis', arch: ['x64'] }, { target: 'zip', arch: ['x64'] }] : [{ target: 'zip', arch: ['x64'] }]),
-    icon, executableName: 'Gofer', artifactName: 'Gofer-${version}-win-x64-portable.${ext}',
+    icon, executableName: 'Skitter', artifactName: 'Skitter-${version}-win-x64-portable.${ext}',
     signAndEditExecutable: ON_WINDOWS, ...(azure && !STORE ? { azureSignOptions: azure } : {})
   },
-  nsis: { oneClick: true, perMachine: false, runAfterFinish: true, createDesktopShortcut: true, createStartMenuShortcut: true, shortcutName: 'Gofer',
-    installerIcon: icon, uninstallerIcon: icon, deleteAppDataOnUninstall: false, artifactName: 'Gofer-Setup-${version}.${ext}' },
+  nsis: { oneClick: true, perMachine: false, runAfterFinish: true, createDesktopShortcut: true, createStartMenuShortcut: true, shortcutName: 'Skitter',
+    installerIcon: icon, uninstallerIcon: icon, deleteAppDataOnUninstall: false, artifactName: 'Skitter-Setup-${version}.${ext}' },
   appx: {
-    identityName: process.env.STORE_IDENTITY_NAME || 'MrInteractive.Gofer',
+    identityName: process.env.STORE_IDENTITY_NAME || 'MrInteractive.Skitter',
     publisher: process.env.STORE_PUBLISHER || 'CN=00000000-0000-0000-0000-000000000000',
     publisherDisplayName: process.env.STORE_PUBLISHER_DISPLAY_NAME || 'Mr. Interactive',
-    applicationId: 'Gofer', displayName: 'Gofer', backgroundColor: '#dbe6f3', languages: ['en-US'], addAutoLaunchExtension: true,
-    artifactName: 'Gofer-${version}-store.${ext}'
+    applicationId: 'Skitter', displayName: 'Skitter', backgroundColor: '#dbe6f3', languages: ['en-US'], addAutoLaunchExtension: true,
+    artifactName: 'Skitter-${version}-store.${ext}'
   },
   // off Windows electron-builder can't edit the exe; set icon + version info ourselves (pure JS)
   afterPack: ON_WINDOWS ? undefined : async (ctx) => {
     const ResEdit = require('resedit');
-    const exe = path.join(ctx.appOutDir, 'Gofer.exe');
+    const exe = path.join(ctx.appOutDir, 'Skitter.exe');
     const exeObj = ResEdit.NtExecutable.from(fs.readFileSync(exe), { ignoreCert: true }); const r = ResEdit.NtExecutableResource.from(exeObj);
     const iconFile = ResEdit.Data.IconFile.from(fs.readFileSync(icon));
     const groups = ResEdit.Resource.IconGroupEntry.fromEntries(r.entries);
@@ -84,7 +84,7 @@ const config = {
     for (const vi of ResEdit.Resource.VersionInfo.fromEntries(r.entries)) {
       const [a, b, c] = pkg.version.split('.').map(Number);
       vi.setFileVersion(a, b, c, 0, 1033); vi.setProductVersion(a, b, c, 0, 1033);
-      vi.setStringValues({ lang: 1033, codepage: 1200 }, { FileDescription: 'Gofer', ProductName: 'Gofer', CompanyName: 'Mr. Interactive', OriginalFilename: 'Gofer.exe', InternalName: 'Gofer', LegalCopyright: 'Mr. Interactive' });
+      vi.setStringValues({ lang: 1033, codepage: 1200 }, { FileDescription: 'Skitter', ProductName: 'Skitter', CompanyName: 'Mr. Interactive', OriginalFilename: 'Skitter.exe', InternalName: 'Skitter', LegalCopyright: 'Mr. Interactive' });
       vi.outputToResourceEntries(r.entries);
     }
     r.outputResource(exeObj); fs.writeFileSync(exe, Buffer.from(exeObj.generate()));

@@ -1,5 +1,5 @@
 'use strict';
-/* What Gofer can see of your work: the foreground window, the text around your cursor, recent clipboard text,
+/* What Skitter can see of your work: the foreground window, the text around your cursor, recent clipboard text,
    and the files Windows lists as recently opened. Everything stays on this computer. */
 const { spawn } = require('child_process');
 const path = require('path');
@@ -11,7 +11,7 @@ const { EventEmitter } = require('events');
 const PS_POLL = `
 $sig = @'
 using System; using System.Runtime.InteropServices; using System.Text;
-public class GoferWin {
+public class SkitterWin {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
@@ -22,11 +22,11 @@ Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
 $last = ""
 while ($true) {
   try {
-    $h = [GoferWin]::GetForegroundWindow()
+    $h = [SkitterWin]::GetForegroundWindow()
     $sb = New-Object System.Text.StringBuilder 1024
-    [void][GoferWin]::GetWindowText($h, $sb, 1024)
+    [void][SkitterWin]::GetWindowText($h, $sb, 1024)
     $pid2 = [uint32]0
-    [void][GoferWin]::GetWindowThreadProcessId($h, [ref]$pid2)
+    [void][SkitterWin]::GetWindowThreadProcessId($h, [ref]$pid2)
     $pname = ""
     try { $pname = (Get-Process -Id $pid2 -ErrorAction Stop).ProcessName } catch {}
     $line = $pname + [char]9 + $sb.ToString()
@@ -36,8 +36,8 @@ while ($true) {
 }`;
 
 const APP_SUFFIXES = /\s+[-–—|]\s+(Google Chrome|Microsoft Edge|Mozilla Firefox|Firefox|Brave|Opera|Vivaldi|Arc|Word|Excel|PowerPoint|Outlook|OneNote|Notepad\+\+|Notepad|Visual Studio Code|Visual Studio|Cursor|Obsidian|Notion|Sublime Text|Figma|Slack|Discord|Adobe [A-Za-z ]+|Photoshop|Premiere Pro|After Effects|DaVinci Resolve|Audacity|OBS( Studio)?|Godot( Engine)?|Unity|Unreal Editor|Blender|Spotify|File Explorer|Explorer|Windows Terminal|Command Prompt|Windows PowerShell|PowerShell|Claude|ChatGPT|Gemini|Zoom|Teams|Microsoft Teams|Mail|Calendar|Finder|Typora|Scrivener|Final Draft|Acrobat Reader|Adobe Acrobat|Foxit Reader|Paint|Snipping Tool|Steam|Epic Games Launcher|Google Docs|Google Sheets|Google Slides|Google Drive|Gmail|YouTube|Canva|Trello|Asana|GitHub|Reddit|X|Twitter|LinkedIn|Dropbox|OneDrive|Miro|Loom|Twitch)\s*$/i;
-const GENERIC_TITLES = new Set(['', 'program manager', 'task switching', 'start', 'search', 'windows default lock screen', 'new tab', 'untitled', 'home', 'desktop', 'settings', 'task view', 'action center', 'notification center', 'gofer', 'downloads', 'documents', 'this pc', 'file explorer', 'recycle bin', 'pictures', 'videos', 'music', 'quick access', 'inbox', 'calendar', 'mail']);
-const SELF = new Set(['gofer', 'electron']);
+const GENERIC_TITLES = new Set(['', 'program manager', 'task switching', 'start', 'search', 'windows default lock screen', 'new tab', 'untitled', 'home', 'desktop', 'settings', 'task view', 'action center', 'notification center', 'gofer', 'downloads', 'documents', 'this pc', 'file explorer', 'recycle bin', 'pictures', 'videos', 'music', 'quick access', 'inbox', 'calendar', 'mail', 'skitter']);
+const SELF = new Set(['skitter', 'gofer', 'electron']);
 
 /* Strip the app name and noise from a window title, leaving the part that names the work. */
 function cleanTitle(title, processName) {
@@ -116,7 +116,7 @@ class Context extends EventEmitter {
   _onForeground(processName, title) {
     const now = Date.now();
     this.fg = { process: processName, title, clean: cleanTitle(title, processName), since: now };
-    if (SELF.has((processName || '').toLowerCase()) || (title || '').trim().toLowerCase() === 'gofer') return; // ignore ourselves
+    if (SELF.has((processName || '').toLowerCase()) || ['skitter', 'gofer'].includes((title || '').trim().toLowerCase())) return; // ignore ourselves
     if (title === this.lastReal.title && processName === this.lastReal.process) return;
     this.lastReal = this.fg;
     this.focused = { text: '', src: '', at: 0, title: '' };
@@ -124,7 +124,7 @@ class Context extends EventEmitter {
     setTimeout(() => { if (this.lastReal === this.fg) this.refreshFocusedText(); }, 1800);
   }
 
-  /* Ask the helper for the text around the cursor in the focused control. Only while a real (non-Gofer) window is in front. */
+  /* Ask the helper for the text around the cursor in the focused control. Only while a real (non-Skitter) window is in front. */
   refreshFocusedText() {
     if (!this._helper || this._mode !== 'events') return Promise.resolve(null);
     if (SELF.has((this.fg.process || '').toLowerCase())) return Promise.resolve(null);

@@ -1,5 +1,5 @@
 'use strict';
-/* Text extraction for the file types Gofer indexes. Pure JS, no native modules. */
+/* Text extraction for the file types Skitter indexes. Pure JS, no native modules. */
 const fs = require('fs');
 const path = require('path');
 

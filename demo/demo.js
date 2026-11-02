@@ -1,4 +1,4 @@
-/* Demo page glue: a pretend document window. Switching documents changes the context; Gofer may go on his own. */
+/* Demo page glue: a pretend document window. Switching documents changes the context; Skitter may go on his own. */
 (function () {
   'use strict';
   const g = window.gofer, S = g.demo.state;
@@ -13,14 +13,14 @@
     cur = i; const d = docs[i];
     S.title = d.title; S.context = d.context;
     $('doctitle').textContent = d.title;
-    $('docbody').innerHTML = '<h1></h1>' + d.body.map(() => '<p></p>').join('') + '<p class="dim">Gofer reads the window title. Give him a few seconds and he may go looking on his own.</p>';
+    $('docbody').innerHTML = '<h1></h1>' + d.body.map(() => '<p></p>').join('') + '<p class="dim">Skitter reads the window title. Give him a few seconds and he may go looking on his own.</p>';
     $('docbody').querySelector('h1').textContent = d.h;
     $('docbody').querySelectorAll('p:not(.dim)').forEach((p, k) => { p.textContent = d.body[k]; });
     clearTimeout(autoTimer);
     if (auto) autoTimer = setTimeout(() => { if (window.__gofer.state() === 'idle') g.emit('auto-trip', {}); }, 3500);
   }
   function openFile(d) {
-    S.title = d.name; $('doctitle').textContent = d.name + ' (opened by Gofer)';
+    S.title = d.name; $('doctitle').textContent = d.name + ' (opened by Skitter)';
     $('docbody').innerHTML = '<h1></h1><p></p><p class="dim"></p>';
     $('docbody').querySelector('h1').textContent = d.name;
     $('docbody').querySelector('p').textContent = d.text;

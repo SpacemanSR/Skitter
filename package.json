@@ -1,8 +1,8 @@
 {
-  "name": "gofer",
-  "productName": "Gofer",
+  "name": "skitter",
+  "productName": "Skitter",
   "version": "0.2.3",
-  "description": "A little yellow robot who fetches the file you were about to go looking for.",
+  "description": "A little yellow robot who lives on the edge of your screen and fetches the file you were about to go looking for.",
   "main": "src/main.js",
   "scripts": {
     "start": "electron ."
@@ -22,6 +22,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/SpacemanSR/gofer.git"
+    "url": "https://github.com/SpacemanSR/skitter.git"
   }
 }

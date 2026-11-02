@@ -1,7 +1,7 @@
 'use strict';
-/* Launch the packaged app in an isolated data folder, let it index the test fixtures, send Gofer on a
+/* Launch the packaged app in an isolated data folder, let it index the test fixtures, send Skitter on a
    meaning-only fetch, and check what came back. Saves screenshots for the run artifacts.
-     node tools/smoke.js [path to Gofer.exe]     (default: release/win-unpacked/Gofer.exe)
+     node tools/smoke.js [path to Skitter.exe]     (default: release/win-unpacked/Skitter.exe)
      node tools/smoke.js --dev                   (run from source with the local Electron) */
 const { spawn } = require('child_process');
 const path = require('path');
@@ -10,7 +10,7 @@ const os = require('os');
 
 const ROOT = path.join(__dirname, '..');
 const dev = process.argv.includes('--dev');
-const exe = dev ? null : (process.argv[2] || path.join(ROOT, 'release', 'win-unpacked', 'Gofer.exe'));
+const exe = dev ? null : (process.argv[2] || path.join(ROOT, 'release', 'win-unpacked', 'Skitter.exe'));
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-smoke-'));
 const shots = path.join(ROOT, 'smoke-shots');
 fs.mkdirSync(shots, { recursive: true });

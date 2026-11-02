@@ -1,4 +1,4 @@
-<title>Gofer Demo</title>
+<title>Skitter Demo</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@400;600;700&display=swap">
 <style>
@@ -159,13 +159,13 @@ body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var
 </style>
 
 <div id="desktop">
-  <div class="intro"><b>Gofer</b><span>a creature that fetches the file you were about to go looking for</span></div>
+  <div class="intro"><b>Skitter</b><span>a creature that fetches the file you were about to go looking for</span></div>
   <div class="window" id="docwin">
     <div class="titlebar"><span class="t" id="doctitle"></span><span class="dots">–▢✕</span></div>
     <div class="doc" id="docbody"></div>
   </div>
   <div class="controls">
-    <button id="btnAsk" type="button">Send Gofer for something</button>
+    <button id="btnAsk" type="button">Send Skitter for something</button>
     <button id="btnSwitch" type="button">Switch document</button>
     <span class="tally" id="tally">0 fetches</span>
   </div>
@@ -342,7 +342,7 @@ body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var
   return { buildQuery, rank, bestPassage, idf };
 });
 
-/* Gofer — the creature, drawn with canvas primitives.
+/* Skitter — the creature, drawn with canvas primitives.
    Shared between the Electron renderer and the web demo (UMD).
    Local coordinate convention: origin = feet center, +y = toward the feet, +x = facing direction. */
 (function (root, factory) {
@@ -390,7 +390,7 @@ body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var
     ctx.restore();
   }
 
-  /* The Gofer: a little yellow wall crawler. Dome body, one big eye, four legs with suction-cup feet,
+  /* The Skitter: a little yellow wall crawler. Dome body, one big eye, four legs with suction-cup feet,
      and a front claw that carries the file. Drawn in profile; origin = feet center, +x = facing.
      p: { facing:+1|-1, walk:phase|null, carrying, blink:0..1, pose, squash, lookDir:-1..1, armRaise:0..1, paperAngle, t } */
   const M = { line: '#2B2420', metal: '#5B6270', metalDark: '#3E4450', joint: '#8A93A3', cup: '#E4572E', eye: '#FBFAF5', pupil: '#1F2533', glow: '#7FF0E0', bodyDark: '#C99A0E', bodyLight: '#FFE586' };
@@ -618,7 +618,7 @@ body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var
 
 </script>
 <script>
-/* Gofer renderer — the creature's state machine, animation and the preview card.
+/* Skitter renderer — the creature's state machine, animation and the preview card.
    Talks to the host through window.gofer (preload bridge in Electron, mock bridge in the web demo). */
 (function () {
   'use strict';
@@ -994,7 +994,7 @@ body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var
 
 </script>
 <script>
-/* Demo page glue: a pretend document window. Switching documents changes the context; Gofer may go on his own. */
+/* Demo page glue: a pretend document window. Switching documents changes the context; Skitter may go on his own. */
 (function () {
   'use strict';
   const g = window.gofer, S = g.demo.state;
@@ -1009,14 +1009,14 @@ body { background: linear-gradient(160deg, var(--wall-a), var(--wall-b) 55%, var
     cur = i; const d = docs[i];
     S.title = d.title; S.context = d.context;
     $('doctitle').textContent = d.title;
-    $('docbody').innerHTML = '<h1></h1>' + d.body.map(() => '<p></p>').join('') + '<p class="dim">Gofer reads the window title. Give him a few seconds and he may go looking on his own.</p>';
+    $('docbody').innerHTML = '<h1></h1>' + d.body.map(() => '<p></p>').join('') + '<p class="dim">Skitter reads the window title. Give him a few seconds and he may go looking on his own.</p>';
     $('docbody').querySelector('h1').textContent = d.h;
     $('docbody').querySelectorAll('p:not(.dim)').forEach((p, k) => { p.textContent = d.body[k]; });
     clearTimeout(autoTimer);
     if (auto) autoTimer = setTimeout(() => { if (window.__gofer.state() === 'idle') g.emit('auto-trip', {}); }, 3500);
   }
   function openFile(d) {
-    S.title = d.name; $('doctitle').textContent = d.name + ' (opened by Gofer)';
+    S.title = d.name; $('doctitle').textContent = d.name + ' (opened by Skitter)';
     $('docbody').innerHTML = '<h1></h1><p></p><p class="dim"></p>';
     $('docbody').querySelector('h1').textContent = d.name;
     $('docbody').querySelector('p').textContent = d.text;

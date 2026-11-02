@@ -1,5 +1,5 @@
 'use strict';
-/* Gofer — main process. Owns the overlay window, tray, context sensors and the human-readable log.
+/* Skitter — main process. Owns the overlay window, tray, context sensors and the human-readable log.
    All indexing, search, embeddings and learning live in the engine process (engine/worker.js). */
 const { app, BrowserWindow, screen, ipcMain, Tray, Menu, clipboard, shell, dialog, nativeImage, utilityProcess } = require('electron');
 const path = require('path');
@@ -10,7 +10,7 @@ const { Log } = require('./log');
 const { Context } = require('./context');
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
-app.setAppUserModelId('com.mrinteractive.gofer');
+app.setAppUserModelId('com.mrinteractive.skitter');
 if (process.env.GOFER_USERDATA) app.setPath('userData', process.env.GOFER_USERDATA); // isolated runs (tests, CI)
 const IS_STORE = !!process.windowsStore;   // Microsoft Store build: the Store handles updates and start-up
 let update = { state: 'idle', version: null };
@@ -56,7 +56,7 @@ class EngineClient {
   constructor() { this.seq = 0; this.pending = new Map(); this.child = null; this.restarts = 0; }
   start(initArgs) {
     this.initArgs = initArgs;
-    this.child = utilityProcess.fork(path.join(__dirname, 'engine', 'worker.js'), [], { serviceName: 'Gofer Engine', stdio: 'pipe' });
+    this.child = utilityProcess.fork(path.join(__dirname, 'engine', 'worker.js'), [], { serviceName: 'Skitter Engine', stdio: 'pipe' });
     this.child.stdout && this.child.stdout.on('data', (d) => log.debug('[engine:stdout]', d.toString().trim()));
     this.child.stderr && this.child.stderr.on('data', (d) => { const s = d.toString().trim(); if (s && !/ExperimentalWarning|trace-warnings/.test(s)) log.debug('[engine:stderr]', s); });
     this.child.on('message', (m) => {
@@ -98,7 +98,7 @@ function createOverlay() {
     x: wa.x, y: wa.y, width: wa.width, height: wa.height,
     transparent: true, frame: false, alwaysOnTop: true, skipTaskbar: true, focusable: false,
     resizable: false, movable: false, minimizable: false, maximizable: false, fullscreenable: false,
-    hasShadow: false, show: false, title: 'Gofer', backgroundColor: '#00000000',
+    hasShadow: false, show: false, title: 'Skitter', backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, spellcheck: false }
   });
   win.setMenu(null);
@@ -141,7 +141,7 @@ function buildMenu() {
     { label: 'Pace', submenu: [
       { label: 'Brisk (~5 s trips)', type: 'radio', checked: settings.get('tripPace') !== 'stroll', click: () => { settings.set('tripPace', 'brisk'); pushSettings(); } },
       { label: 'Stroll (~9 s trips)', type: 'radio', checked: settings.get('tripPace') === 'stroll', click: () => { settings.set('tripPace', 'stroll'); pushSettings(); } }] },
-    ...(multi ? [{ label: 'Move Gofer to the screen with the mouse', click: moveToCursorDisplay }] : []),
+    ...(multi ? [{ label: 'Move Skitter to the screen with the mouse', click: moveToCursorDisplay }] : []),
     { type: 'separator' },
     { label: (s.scanning ? 'Reading folders… ' : '') + (s.count || 0).toLocaleString() + ' files indexed', enabled: false },
     { label: meaning, enabled: false },
@@ -155,25 +155,25 @@ function buildMenu() {
     { label: 'Open data folder', click: () => shell.openPath(app.getPath('userData')) },
     { type: 'separator' },
     ...(update.state === 'ready' ? [{ label: 'Restart to update to ' + update.version, click: () => setupUpdates.install && setupUpdates.install() }] : []),
-    { label: 'Gofer ' + app.getVersion() + (update.state === 'downloading' ? ' (downloading ' + update.version + '…)' : ''), enabled: false },
-    { label: 'Quit Gofer', click: () => app.quit() }
+    { label: 'Skitter ' + app.getVersion() + (update.state === 'downloading' ? ' (downloading ' + update.version + '…)' : ''), enabled: false },
+    { label: 'Quit Skitter', click: () => app.quit() }
   ]);
 }
 async function refreshStats() { try { engineStats = Object.assign(engineStats, await engine.call('stats', {}, 5000)); } catch (e) {} }
 function createTray() {
   tray = new Tray(trayIcon());
-  tray.setToolTip('Gofer: click to fetch, right-click for options');
+  tray.setToolTip('Skitter: click to fetch, right-click for options');
   tray.on('click', () => send('ask', {}));
   tray.on('right-click', async () => { await refreshStats(); tray.popUpContextMenu(buildMenu()); });
 }
 /* You point at the file you wanted; he explains why he didn't bring it, fixes what he can, and learns. */
 async function showMissedFile() {
-  const pick = await dialog.showOpenDialog({ title: lastRequest && lastRequest.task ? 'Which file did you want for \u201c' + lastRequest.task + '\u201d?' : 'Which file should Gofer have found?',
+  const pick = await dialog.showOpenDialog({ title: lastRequest && lastRequest.task ? 'Which file did you want for \u201c' + lastRequest.task + '\u201d?' : 'Which file should Skitter have found?',
     properties: ['openFile'], defaultPath: app.getPath('documents') });
   if (pick.canceled || !pick.filePaths.length) return;
   let res;
   try { res = await engine.call('diagnose', { path: pick.filePaths[0], request: lastRequest }, 60000); }
-  catch (e) { dialog.showMessageBox({ type: 'error', message: 'Gofer couldn\u2019t check that file.', detail: e.message }); return; }
+  catch (e) { dialog.showMessageBox({ type: 'error', message: 'Skitter couldn\u2019t check that file.', detail: e.message }); return; }
   log.debug('missed file', pick.filePaths[0], '→', res.verdict, res.rank || '');
   if (res.verdict === 'outside') {
     const r = await dialog.showMessageBox({ type: 'question', message: res.message, buttons: ['Add that folder', 'Not now'], defaultId: 0, cancelId: 1 });
@@ -182,7 +182,7 @@ async function showMissedFile() {
 }
 
 async function chooseFolders() {
-  const res = await dialog.showOpenDialog({ title: 'Folders Gofer may dig through (these replace the current list: ' + settings.get('roots').map((r) => path.basename(r)).join(', ') + ')', properties: ['openDirectory', 'multiSelections'], defaultPath: app.getPath('documents') });
+  const res = await dialog.showOpenDialog({ title: 'Folders Skitter may dig through (these replace the current list: ' + settings.get('roots').map((r) => path.basename(r)).join(', ') + ')', properties: ['openDirectory', 'multiSelections'], defaultPath: app.getPath('documents') });
   if (res.canceled || !res.filePaths.length) return;
   settings.set('roots', res.filePaths);
   engine.call('setRoots', { roots: res.filePaths }).catch(() => {});
@@ -265,7 +265,7 @@ ipcMain.handle('gofer:fetch', async (_e, req) => {
 });
 
 /* A picture of the file for the card. Order: the file itself (photos), Windows' own thumbnail (what Explorer shows),
-   then what Gofer can render (PDF first page, the cover image saved inside Office files). Cached per file version. */
+   then what Skitter can render (PDF first page, the cover image saved inside Office files). Cached per file version. */
 const previewCache = new Map();
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg']);
 const RENDER_FIRST = new Set(['.pdf', '.docx', '.pptx', '.xlsx', '.odt', '.odp', '.ods']); // real page beats a generic icon
@@ -328,11 +328,31 @@ async function smokeTest() {
 }
 
 // ---------- boot ----------
+/* Skitter used to be called Gofer: carry over its data (index, learning, settings) and remove the old install once. */
+function migrateFromGofer() {
+  if (process.env.GOFER_USERDATA) return;
+  try {
+    const { execFileSync, spawn } = require('child_process');
+    const oldDir = path.join(app.getPath('appData'), 'Gofer'), newDir = app.getPath('userData');
+    if (!fs.existsSync(oldDir) || fs.existsSync(path.join(newDir, 'gofer.db'))) return;
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/IM', 'Gofer.exe', '/F'], { stdio: 'ignore', windowsHide: true }); } catch (e) {} }
+    fs.mkdirSync(newDir, { recursive: true });
+    for (const f of fs.readdirSync(oldDir)) {
+      const from = path.join(oldDir, f), to = path.join(newDir, f);
+      if (fs.existsSync(to)) continue;
+      try { fs.renameSync(from, to); } catch (e) { try { fs.cpSync(from, to, { recursive: true }); } catch (_) {} }
+    }
+    const oldUninstaller = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Gofer', 'Uninstall Gofer.exe');
+    if (process.platform === 'win32' && app.isPackaged && fs.existsSync(oldUninstaller)) spawn(oldUninstaller, ['/S'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  } catch (e) { /* best effort */ }
+}
+
 app.whenReady().then(async () => {
   try {
+    migrateFromGofer();
     settings = new Settings(userFile('settings.json'));
     log = new Log(app.getPath('userData'));
-    log.debug('Gofer starting', app.getVersion(), process.platform, 'userData=' + app.getPath('userData'));
+    log.debug('Skitter starting', app.getVersion(), process.platform, 'userData=' + app.getPath('userData'));
     { // Windows' own idea of Documents / Desktop / Downloads, which follows OneDrive redirection; replaces the old guessed default
       const home = require('os').homedir();
       const legacy = [path.join(home, 'Documents'), path.join(home, 'Desktop')];
@@ -371,7 +391,7 @@ app.whenReady().then(async () => {
     }
   } catch (e) {
     try { log.debug('boot failed', e.stack || e.message); } catch (_) {}
-    dialog.showErrorBox('Gofer could not start', String(e.stack || e.message)); app.quit();
+    dialog.showErrorBox('Skitter could not start', String(e.stack || e.message)); app.quit();
   }
 });
 

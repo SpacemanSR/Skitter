@@ -1,4 +1,4 @@
-/* Gofer renderer — the creature's state machine, animation and the preview card.
+/* Skitter renderer — the creature's state machine, animation and the preview card.
    Talks to the host through window.gofer (preload bridge in Electron, mock bridge in the web demo). */
 (function () {
   'use strict';

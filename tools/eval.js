@@ -11,7 +11,7 @@ const { Engine } = require('../src/engine/engine');
 const { labelFor } = require('../src/engine/ranker');
 
 const args = {}; for (let i = 2; i < process.argv.length; i += 2) args[process.argv[i].replace(/^--/, '')] = process.argv[i + 1];
-const modelDir = args.model || path.join(os.homedir(), process.platform === 'win32' ? 'AppData/Roaming/Gofer/models/all-MiniLM-L6-v2' : '.config/Gofer/models/all-MiniLM-L6-v2');
+const modelDir = args.model || path.join(os.homedir(), process.platform === 'win32' ? 'AppData/Roaming/Skitter/models/all-MiniLM-L6-v2' : '.config/Skitter/models/all-MiniLM-L6-v2');
 
 function score(results) {
   const n = results.length; if (!n) return { n: 0 };

@@ -1,4 +1,4 @@
-# Gofer's Windows context helper.
+# Skitter's Windows context helper.
 # - Event-driven: reports the foreground window (process + title) when it changes or retitles (SetWinEventHook, no polling).
 # - On request ("text <id>" on stdin), reads the text around the caret in the focused control via UI Automation.
 #   Password fields are never read. Output is JSON lines on stdout. Exits when stdin closes (parent quit).
@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Automation;
 using System.Windows.Automation.Text;
 
-public static class GoferHelper {
+public static class SkitterHelper {
   public delegate void WinEventDelegate(IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
   [DllImport("user32.dll")] static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr hmod, WinEventDelegate cb, uint pid, uint tid, uint flags);
   [DllImport("user32.dll")] static extern bool UnhookWinEvent(IntPtr hook);
@@ -144,4 +144,4 @@ public static class GoferHelper {
   }
 }
 '@
-[GoferHelper]::Run()
+[SkitterHelper]::Run()

@@ -6,7 +6,7 @@ const os = require('os');
 function defaults() {
   const home = os.homedir();
   return {
-    // folders Gofer may dig through
+    // folders Skitter may dig through
     roots: [path.join(home, 'Documents'), path.join(home, 'Desktop')],
     // go looking on his own when you settle on a document
     autoMode: true,

@@ -1,4 +1,4 @@
-# Releasing Gofer
+# Releasing Skitter
 
 One-time setup (about an hour of your time, plus a few days waiting on identity checks), then every release is: bump the version, push a tag.
 
@@ -32,24 +32,24 @@ Individual developers are eligible in the US and Canada. The identity check take
    - **Secrets:** `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`
    - **Variables:** `AZURE_SIGNING_ENDPOINT` (the Account URI), `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE`, `AZURE_SIGNING_PUBLISHER` (your name exactly as it appears on the certificate)
 
-The next pipeline run signs `Gofer.exe` and the installer, and fails the build if either signature isn't valid.
+The next pipeline run signs `Skitter.exe` and the installer, and fails the build if either signature isn't valid.
 
 What to expect: signed downloads can still show "Windows protected your PC" for the first releases. The warning fades as people install signed versions under the same identity. Keep signing every release with the same account so that reputation carries over.
 
 ## 3. Microsoft Store (no SmartScreen warning at all)
 
 1. Create a developer account at partner.microsoft.com (individual). Check the current registration fee on the sign-up page.
-2. Create a new app and **reserve the name**. "Gofer" may well be taken; have a second choice ready (e.g. "Gofer — File Fetcher"). If you change it, set `productName` in `tools/build-win.js` to match.
+2. Create a new app and **reserve the name**. "Skitter" may well be taken; have a second choice ready (e.g. "Skitter — File Fetcher"). If you change it, set `productName` in `tools/build-win.js` to match.
 3. Open **Product identity** and copy three values into GitHub Variables:
    - `STORE_IDENTITY_NAME` ← *Package/Identity/Name*
    - `STORE_PUBLISHER` ← *Package/Identity/Publisher* (starts with `CN=`)
    - `STORE_PUBLISHER_DISPLAY_NAME` ← *Package/Properties/PublisherDisplayName*
-4. Push a tag (below). The run produces `Gofer-x.y.z-store.appx` in its artifacts. The Store signs it, so it doesn't need your certificate.
+4. Push a tag (below). The run produces `Skitter-x.y.z-store.appx` in its artifacts. The Store signs it, so it doesn't need your certificate.
 5. Start a submission:
    - **Packages:** upload the `.appx`.
    - **Privacy policy URL:** the GitHub Pages link from step 1.
-   - **Age rating:** complete the questionnaire. Gofer has no user-generated content or communication, so expect the lowest rating.
-   - **Restricted capability `runFullTrust`:** you'll be asked why. Answer: *"Gofer is a desktop companion that indexes the user's own documents locally and reads the active window title and cursor text through Windows UI Automation to find related files. All processing is on-device."*
+   - **Age rating:** complete the questionnaire. Skitter has no user-generated content or communication, so expect the lowest rating.
+   - **Restricted capability `runFullTrust`:** you'll be asked why. Answer: *"Skitter is a desktop companion that indexes the user's own documents locally and reads the active window title and cursor text through Windows UI Automation to find related files. All processing is on-device."*
    - **Store listing:** description, at least one screenshot (1366×768 or larger), and the search terms.
 6. Certification usually takes one to three business days. The Store build starts with Windows through a startup task, which users can turn off in Task Manager › Startup apps, and the Store delivers its updates.
 
@@ -57,7 +57,7 @@ What to expect: signed downloads can still show "Windows protected your PC" for 
 
 ```bash
 npm version 0.3.0 --no-git-tag-version   # or edit package.json
-git commit -am "Gofer 0.3.0"
+git commit -am "Skitter 0.3.0"
 git tag v0.3.0
 git push && git push --tags
 ```
