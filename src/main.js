@@ -248,7 +248,7 @@ function applyInteractive() {
   if (want !== interactive) { interactive = want; win.setIgnoreMouseEvents(!want, { forward: !process.env.GOFER_NO_FORWARD }); }
 }
 ipcMain.on('gofer:interactive', (_e, on) => { rendererWants = !!on; applyInteractive(); });
-ipcMain.on('gofer:zones', (_e, z) => { zones = Array.isArray(z) ? z.filter((r) => Array.isArray(r) && r.length === 4) : []; applyInteractive(); });
+ipcMain.on('gofer:zones', (_e, z) => { zones = Array.isArray(z) ? z.filter((r) => Array.isArray(r) && r.length === 4) : []; if (process.env.GOFER_DEBUG) log.debug('[zones]', JSON.stringify(zones)); applyInteractive(); });
 setInterval(applyInteractive, 40);
 ipcMain.on('gofer:focus', (_e, on) => {
   if (!win) return;

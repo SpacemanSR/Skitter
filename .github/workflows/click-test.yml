@@ -1,0 +1,22 @@
+# Real mouse + keyboard on a Windows desktop: does Skitter answer every click?
+name: click-test
+on:
+  push:
+    branches: ['click-test*']
+  workflow_dispatch:
+jobs:
+  clicks:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node tools/fetch-model.js --require-lock
+      - name: Click test (from source)
+        timeout-minutes: 5
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/click-test.ps1 -Exe node_modules/electron/dist/electron.exe -AppArg .
