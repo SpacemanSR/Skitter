@@ -81,7 +81,7 @@ jobs:
 
       - name: Keep the new model lock (first run only; commit it)
         if: steps.model.outputs.new_lock == 'true'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: model-lock
           path: model.lock.json
@@ -125,7 +125,7 @@ jobs:
 
       - name: Upload build
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: gofer-windows
           if-no-files-found: ignore
