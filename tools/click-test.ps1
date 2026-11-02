@@ -16,6 +16,7 @@ public static class M {
 }
 "@
 $root = Split-Path $PSScriptRoot -Parent
+$Exe = (Resolve-Path $Exe).Path
 $data = Join-Path $env:TEMP ("skitter-click-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
 $env:GOFER_USERDATA = $data
 $env:GOFER_DEBUG = '1'
@@ -26,7 +27,7 @@ $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 Write-Host "work area $($wa.X),$($wa.Y) $($wa.Width)x$($wa.Height)"
 
 # Something to steal the foreground the way a real document app does after the card is clicked.
-$p = if ($AppArg) { Start-Process -FilePath $Exe -ArgumentList $AppArg -PassThru } else { Start-Process -FilePath $Exe -PassThru }
+$p = if ($AppArg) { Start-Process -FilePath $Exe -ArgumentList $AppArg -WorkingDirectory $root -PassThru } else { Start-Process -FilePath $Exe -PassThru }
 function Lines { if (Test-Path $log) { Get-Content $log } else { @() } }
 function Mode { $m = Lines | Select-String '\[mode\] (\w+)' | Select-Object -Last 1; if ($m) { $m.Matches[0].Groups[1].Value } else { 'idle' } }
 function Zones { $z = Lines | Select-String '\[zones\] (.*)$' | Select-Object -Last 1; if ($z) { ,($z.Matches[0].Groups[1].Value | ConvertFrom-Json) } else { $null } }
