@@ -1,7 +1,7 @@
 # Drive Skitter with the real mouse and keyboard on Windows and check he answers every click.
-#   Round 1: click him, type, Enter -> he fetches; click the card -> file opens
-#   Round 2: click him again -> the task box must open again (the bug from 0.3.1), type, Enter -> he fetches
-#   Round 3: while the card is up, click him -> he goes back for another file
+#   Round 1: click him, type, Enter -> he fetches; click the card -> the file opens
+#   Round 2: another app has the foreground; click him -> the task box opens again (the 0.3.1 bug), fetch
+#   Round 3: with the card still up, click him -> the task box opens again; fetch; "Not this one" -> retry
 # Usage: powershell -File tools/click-test.ps1 -Exe <Skitter.exe | electron.exe> [-AppArg .]
 param([Parameter(Mandatory = $true)][string]$Exe, [string]$AppArg = '')
 $ErrorActionPreference = 'Stop'
@@ -40,27 +40,32 @@ function Check($name, $ok) { $script:results += [pscustomobject]@{ Check = $name
 try {
   WaitFor 'index' { (Lines | Select-String 'scan done') -and (Zones) } 90 | Out-Null
   Start-Sleep 2
-  foreach ($round in 1, 2) {
+  function Ask($label) {
     ClickHim
     $ok = WaitFor 'task box' { (Mode) -eq 'ask' } 4
-    Check "round $round`: click opens the task box" $ok
-    if (-not $ok) { break }
-    Start-Sleep -Milliseconds 400
+    Check "$label`: clicking him opens the task box" $ok
+    if (-not $ok) { return $false }
+    Start-Sleep -Milliseconds 500
     [System.Windows.Forms.SendKeys]::SendWait('budget{ENTER}')
     $ok = WaitFor 'card' { (Mode) -eq 'present' } 20
-    Check "round $round`: typing reached the box and he came back with a file" $ok
-    if (-not $ok) { break }
+    Check "$label`: what I typed reached the box and he came back with a file" $ok
     Start-Sleep 1
-    if ($round -eq 1) {
-      ClickCard
-      Check "round 1: clicking the card opens the file" (WaitFor 'accept' { (Lines | Select-String '"outcome":"accept"|\[mode\] happy') } 4)
-      # stand in for Excel/Word grabbing the foreground
-      Start-Process notepad.exe; Start-Sleep 2
-      WaitFor 'idle' { (Mode) -eq 'idle' } 5 | Out-Null
-      Start-Sleep 1
-    } else {
-      ClickHim
-      Check 'round 2: clicking him while the card is up sends him for another' (WaitFor 'retry' { (Lines | Select-String 'fetch task .*excl|\[mode\] trip' | Measure-Object).Count -ge 3 } 5)
+    return $ok
+  }
+  if (Ask 'round 1') {
+    ClickCard
+    Check 'round 1: clicking the card opens the file' (WaitFor 'accept' { (Lines | Select-String '\[mode\] happy') } 4)
+    Start-Process notepad.exe; Start-Sleep 2   # stand in for Excel/Word taking the foreground
+    WaitFor 'idle' { (Mode) -eq 'idle' } 5 | Out-Null
+    Start-Sleep 1
+    if (Ask 'round 2 (after a file opened)') {
+      if (Ask 'round 3 (card still up)') {
+        $z = Zones; $k = $z | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
+        $before = (Lines | Select-String '\[mode\] trip').Count
+        Write-Host "click Not this one at $($k[0] + $k[2] - 50),$($k[1] + $k[3] - 18)"
+        [M]::Click($wa.X + $k[0] + $k[2] - 50, $wa.Y + $k[1] + $k[3] - 18)
+        Check "'Not this one' sends him for another" (WaitFor 'retry' { (Lines | Select-String '\[mode\] trip').Count -gt $before } 4)
+      }
     }
   }
 } finally {
@@ -70,5 +75,5 @@ try {
   Get-Process electron, Skitter -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 $failed = $results | Where-Object { -not $_.Pass }
-if ($failed -or $results.Count -lt 5) { Write-Host "click test failed"; exit 1 }
+if ($failed -or $results.Count -lt 8) { Write-Host "click test failed"; exit 1 }
 Write-Host "click test passed"
