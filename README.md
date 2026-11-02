@@ -50,7 +50,7 @@ node tools/eval.js --roots <dir> --cases tools/cases/fixtures.json
 node tools/fetch-model.js                   # pinned, verified model into ./model
 node tools/build-win.js                     # installer + zip on Windows; zip elsewhere
 node tools/smoke.js --dev                   # launch, fetch, check (or pass a Skitter.exe path)
-makensis -DSRC=release/win-unpacked -DVERSION=0.2.0 -DOUTFILE=dist/Skitter-Setup-0.2.0.exe -DICON=buildres/icon.ico buildres/installer.nsi
+makensis -DSRC=release/win-unpacked -DVERSION=0.2.0 -DOUTFILE=dist/Skitter-Setup-0.2.0.exe -DICON=buildres/icon.ico tools/installer.nsi
 ```
 
 Run `tools/eval.js` before shipping any ranking change; ship only if top-1 doesn't drop.

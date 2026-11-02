@@ -1,0 +1,15 @@
+{
+  "repo": "Xenova/all-MiniLM-L6-v2",
+  "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+  "files": {
+    "onnx/model_quantized.onnx": {
+      "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1",
+      "size": 22972370
+    },
+    "vocab.txt": {
+      "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+      "size": 231508
+    }
+  },
+  "pinnedAt": "2026-11-02T04:03:16.914Z"
+}
