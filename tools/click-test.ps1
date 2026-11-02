@@ -75,15 +75,15 @@ try {
         # "click to open" the way a hand does and click it. 0.3.2 shrank the card on the way down.
         if (Ask 'round 4 (file with a preview)' 'asteroid roguelike') {
           Start-Sleep 2
-          $k = Zones | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
+          $zz = Zones; $k = $zz | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
           [M]::SetCursorPos($wa.X + $k[0] + [int]($k[2] / 2), $wa.Y + $k[1] + 70); Start-Sleep -Milliseconds 300
           [M]::SetCursorPos($wa.X + $k[0] + [int]($k[2] / 2) + 2, $wa.Y + $k[1] + 72); Start-Sleep 1
-          $k = Zones | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
+          $zz = Zones; $k = $zz | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
           Check 'round 4: hovering the picture opens the card wide' ($k[2] -gt 500)
           $x = $wa.X + $k[0] + 50; $y0 = $wa.Y + $k[1] + 80; $y1 = $wa.Y + $k[1] + $k[3] - 24
           for ($i = 1; $i -le 25; $i++) { [M]::SetCursorPos($x, [int]($y0 + ($y1 - $y0) * $i / 25)); Start-Sleep -Milliseconds 25 }
           Start-Sleep -Milliseconds 400
-          $k2 = Zones | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
+          $zz = Zones; $k2 = $zz | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
           Write-Host "card on arrival at the footer: $($k2 -join ','); clicking at $x,$y1"
           $happy = (Lines | Select-String '\[mode\] happy').Count
           [M]::Click($x, $y1)
