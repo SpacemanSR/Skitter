@@ -66,7 +66,10 @@ body { font-family: var(--font); color: var(--ink); -webkit-user-select: none; u
 .terms { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
 .terms span { font-size: 11px; color: var(--ink-dim); border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; padding: 2px 8px; }
 .card-foot { margin-top: 10px; font-size: 11px; color: var(--ink-dim); display: flex; gap: 6px; flex-wrap: wrap; }
+.card-foot { align-items: center; }
 .card-foot .sep { opacity: 0.5; }
+.retry { margin-left: auto; font: inherit; font-size: 11px; color: var(--ink); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.retry:hover { background: rgba(241,200,107,0.18); border-color: var(--accent); }
 .timer { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,0.06); }
 .timer-fill { height: 100%; width: 100%; background: var(--accent); transform-origin: left; transform: scaleX(1); }
 #card.counting .timer-fill { transition: transform var(--present-ms, 14000ms) linear; transform: scaleX(0); }

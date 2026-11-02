@@ -245,22 +245,52 @@ function applyInteractive() {
     inside = zones.some(([zx, zy, zw, zh]) => x >= zx && x <= zx + zw && y >= zy && y <= zy + zh);
   }
   const want = inside || rendererWants;
-  if (want !== interactive) { interactive = want; win.setIgnoreMouseEvents(!want, { forward: !process.env.GOFER_NO_FORWARD }); }
+  // Re-send the state now and then even when it hasn't changed: Windows can drop it when the window is
+  // re-shown or loses its top spot, and then he stops answering clicks while we think he's fine.
+  const now = Date.now();
+  if (want !== interactive || now - lastApplied > 1000) {
+    interactive = want; lastApplied = now;
+    win.setIgnoreMouseEvents(!want, { forward: !process.env.GOFER_NO_FORWARD });
+  }
+}
+let lastApplied = 0;
+function reassertOverlay() {
+  if (!win || win.isDestroyed()) return;
+  win.setAlwaysOnTop(true, 'screen-saver', 1);
+  if (!win.isVisible()) win.showInactive();
+  lastApplied = 0; applyInteractive();
 }
 ipcMain.on('gofer:interactive', (_e, on) => { rendererWants = !!on; applyInteractive(); });
-ipcMain.on('gofer:zones', (_e, z) => { zones = Array.isArray(z) ? z.filter((r) => Array.isArray(r) && r.length === 4) : []; applyInteractive(); });
+ipcMain.on('gofer:zones', (_e, z) => { zones = Array.isArray(z) ? z.filter((r) => Array.isArray(r) && r.length === 4) : []; if (process.env.GOFER_DEBUG) log.debug('[zones]', JSON.stringify(zones)); applyInteractive(); });
 setInterval(applyInteractive, 40);
 ipcMain.on('gofer:focus', (_e, on) => {
   if (!win) return;
-  if (on) { win.setFocusable(true); win.focus(); win.webContents.focus(); }
-  else { win.blur(); win.setFocusable(false); if (process.platform === 'win32') { win.hide(); win.showInactive(); } }
+  if (on) takeFocus();
+  else giveBackFocus();
 });
+// The task box needs the keyboard. Windows only lets a background app take the foreground in narrow
+// cases, and right after a document app opens it often refuses; re-raising our top spot first and
+// asking twice gets it reliably. (The old hide()/showInactive() way of handing focus back left the
+// window ignoring clicks on some PCs, so he answered once and never again.)
+function takeFocus() {
+  if (!win || win.isDestroyed()) return;
+  win.setFocusable(true);
+  if (process.platform === 'win32') { win.setAlwaysOnTop(false); win.setAlwaysOnTop(true, 'screen-saver', 1); }
+  win.focus(); win.webContents.focus();
+  setTimeout(() => { if (win && !win.isDestroyed() && !win.isFocused()) { win.focus(); win.webContents.focus(); log.debug('[focus] second try', win.isFocused()); } }, 120);
+}
+function giveBackFocus() {
+  if (!win || win.isDestroyed()) return;
+  win.blur(); win.setFocusable(false);
+  reassertOverlay();
+}
 ipcMain.on('gofer:mode', (_e, m) => { if (m !== rendererMode) log.debug('[mode]', m); rendererMode = m; });
+ipcMain.on('gofer:click', (_e, c) => log.debug('[click]', c));
 ipcMain.on('gofer:menu', async () => {
   if (!win) return;
   await refreshStats();
   win.setFocusable(true); win.focus();
-  buildMenu().popup({ window: win, callback: () => { if (!win) return; win.blur(); win.setFocusable(false); if (process.platform === 'win32') { win.hide(); win.showInactive(); } } });
+  buildMenu().popup({ window: win, callback: giveBackFocus });
 });
 ipcMain.on('gofer:ui', (_e, ui) => { if (ui && typeof ui.eyelineFrac === 'number') settings.set('eyelineFrac', ui.eyelineFrac); });
 ipcMain.handle('gofer:state', () => ({ ready: engineStats.ready, count: engineStats.count, presentTimeoutSec: settings.get('presentTimeoutSec'), eyelineFrac: settings.get('eyelineFrac'),
@@ -314,7 +344,7 @@ ipcMain.handle('gofer:decide', async (_e, d) => {
   log.outcome(d.id, d.outcome);
   engine.call('outcome', { id: d.id, outcome: d.outcome }).catch((e) => log.debug('outcome failed', e.message));
   if (!p) return;
-  if (d.outcome === 'accept') { const err = await shell.openPath(p.path); if (err) log.debug('open failed', err); }
+  if (d.outcome === 'accept') { const err = await shell.openPath(p.path); if (err) log.debug('open failed', err); setTimeout(reassertOverlay, 1500); setTimeout(reassertOverlay, 4000); }
   else if (d.outcome === 'reveal') shell.showItemInFolder(p.path);
 });
 

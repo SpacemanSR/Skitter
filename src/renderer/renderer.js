@@ -10,7 +10,7 @@
   const el = { hello: $('hello'), ask: $('ask'), askInput: $('askInput'), status: $('status'), card: $('card'),
     cardIcon: $('cardIcon'), cardName: $('cardName'), cardMeta: $('cardMeta'), cardReason: $('cardReason'),
     cardSnippet: $('cardSnippet'), cardTerms: $('cardTerms'), cardTimer: $('cardTimer'),
-    cardPreview: $('cardPreview'), cardImg: $('cardImg'), cardPreviewNote: $('cardPreviewNote') };
+    cardPreview: $('cardPreview'), cardImg: $('cardImg'), cardPreviewNote: $('cardPreviewNote'), cardRetry: $('cardRetry') };
 
   // ---------- state ----------
   const c = { x: 0, y: 0, rot: 0, facing: -1, pose: 'sit', walk: null, carrying: false, armRaise: 0, blink: 0,
@@ -228,7 +228,7 @@
   function pauseCardTimer() { if (!cardTimer) return; clearTimeout(cardTimer); cardTimer = null; cardRemaining -= performance.now() - cardShownAt;
     const sx = Math.max(0, cardRemaining / (presentTimeoutSec * 1000)); el.card.classList.remove('counting'); el.card.classList.add('paused'); el.cardTimer.style.transform = 'scaleX(' + sx + ')'; }
   function resumeCardTimer() { if (cardTimer || mode !== 'present') return; el.cardTimer.style.transform = ''; startCardTimer(Math.max(3000, cardRemaining)); }
-  function hideCard(fly) { clearTimeout(cardTimer); cardTimer = null; if (el.card.classList.contains('hidden')) return; el.card.classList.remove('in', 'counting', 'paused'); el.card.classList.add(fly ? 'fly' : 'out'); clearTimeout(hideTimer); hideTimer = setTimeout(() => el.card.classList.add('hidden'), 560); }
+  function hideCard(fly) { clearTimeout(cardTimer); cardTimer = null; if (el.card.classList.contains('hidden')) return; el.card.classList.remove('in', 'counting', 'paused'); el.card.classList.add(fly ? 'fly' : 'out'); clearTimeout(hideTimer); hideTimer = setTimeout(() => { el.card.classList.add('hidden'); syncInteractive(); }, 560); }
 
   async function decide(outcome) {
     if (mode !== 'present' || !trip) return;
@@ -236,7 +236,7 @@
     bridge.decide({ id: p.id, outcome });
     if (outcome === 'accept' || outcome === 'reveal') {
       hideCard(true); mode = 'happy'; c.carrying = false; c.armRaise = 0; c.pose = 'happy';
-      await wait(1100); c.pose = 'sit'; mode = 'idle'; trip = null;
+      await wait(1100); if (mode === 'happy') { c.pose = 'sit'; mode = 'idle'; trip = null; }
     } else if (outcome === 'retry') {
       hideCard(false); c.pose = 'walk'; await tween(c, { armRaise: 0, paperAngle: 0 }, 220); c.carrying = false;
       mode = 'idle'; runTrip(tripMode, task, excludes, true);
@@ -245,7 +245,15 @@
     }
     syncInteractive();
   }
-  el.card.addEventListener('click', (e) => { e.stopPropagation(); decide('accept'); });
+  // Open on press-and-release inside the card rather than the 'click' event: on Windows the card can move
+  // a pixel or lose the press to its own fade-in, and then 'click' never fires.
+  let cardPress = false;
+  el.card.addEventListener('mousedown', (e) => { if (e.button === 0) { cardPress = true; if (bridge.click) bridge.click({ on: 'card', mode }); } });
+  el.card.addEventListener('mouseup', (e) => {
+    if (e.button !== 0 || !cardPress) return; cardPress = false; e.stopPropagation();
+    if (el.cardRetry.contains(e.target)) decide('retry'); else decide('accept');
+  });
+  el.card.addEventListener('click', (e) => e.stopPropagation());
   el.card.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); decide('reveal'); });
   el.card.addEventListener('mouseenter', pauseCardTimer);
   // hover the picture to open the card wide; click the picture (or anywhere on the card) to open the file
@@ -259,6 +267,8 @@
     const l = L(); el.ask.classList.remove('hidden');
     el.ask.style.left = (l.standX - 52 - 280) + 'px'; el.ask.style.top = (c.y - 70) + 'px';
     bridge.focus(true); el.askInput.value = ''; setTimeout(() => el.askInput.focus(), 30);
+    // Windows sometimes refuses the first request for the keyboard (right after another app opened); ask again.
+    setTimeout(() => { if (mode === 'ask' && !document.hasFocus()) { bridge.focus(true); setTimeout(() => el.askInput.focus(), 60); } }, 250);
   }
   function closeAsk() { el.ask.classList.add('hidden'); bridge.focus(false); if (mode === 'ask') { mode = 'idle'; c.pose = 'sit'; } syncInteractive(); }
   el.askInput.addEventListener('keydown', (e) => {
@@ -297,7 +307,7 @@
   window.addEventListener('mousemove', (e) => {
     mouse.x = e.clientX; mouse.y = e.clientY;
     hover = overCreature(e.clientX, e.clientY);
-    if (dragging) { if (!dragging.moved && Math.abs(e.clientY - dragging.y0) > 4) dragging.moved = true;
+    if (dragging && !dragging.fixed) { if (!dragging.moved && Math.abs(e.clientY - dragging.y0) > 4) dragging.moved = true;
       if (dragging.moved) { const l = L(); eyelineFrac = Math.min(0.9, Math.max(0.06, e.clientY / l.H)); snapToPerch(); } }
     syncInteractive();
   });
@@ -305,13 +315,22 @@
   window.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     if (!overCreature(e.clientX, e.clientY)) return;
-    if (mode === 'idle') dragging = { y0: e.clientY, moved: false };
+    if (bridge.click) bridge.click({ on: 'him', mode, x: e.clientX, y: e.clientY, focused: document.hasFocus() });
+    if (mode === 'happy') { mode = 'idle'; c.pose = 'sit'; trip = null; } // don't make him wait out his little celebration
+    if (mode === 'idle' || mode === 'present') dragging = { y0: e.clientY, moved: false, fixed: mode !== 'idle' };
   });
   window.addEventListener('mouseup', (e) => {
     if (e.button !== 0) return;
-    if (dragging) { const d = dragging; dragging = null; if (d.moved) { bridge.saveUi({ eyelineFrac }); } else if (mode === 'idle') openAsk(); syncInteractive(); return; }
-    if (mode === 'present' && overCreature(e.clientX, e.clientY)) decide('retry');
-    else if (mode === 'ask' && !overCreature(e.clientX, e.clientY) && !overDom(e.clientX, e.clientY)) closeAsk();
+    if (dragging) {
+      const d = dragging; dragging = null;
+      if (d.moved) bridge.saveUi({ eyelineFrac });
+      else if (mode === 'idle') openAsk();
+      // Clicking him always means "I have a new job for you": the card steps aside (a soft no) and the box opens.
+      else if (mode === 'present') decide('ignore').then(() => { if (mode === 'idle') openAsk(); });
+      syncInteractive(); return;
+    }
+    cardPress = false;
+    if (mode === 'ask' && !overCreature(e.clientX, e.clientY) && !overDom(e.clientX, e.clientY)) closeAsk();
   });
   canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); if (overCreature(e.clientX, e.clientY)) bridge.menu({ x: e.clientX, y: e.clientY }); });
 
