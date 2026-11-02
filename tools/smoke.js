@@ -49,7 +49,7 @@ child.on('exit', (code) => {
   console.log('\n--- checks ---');
   let ok = true;
   for (const [name, pass] of checks) { console.log((pass ? '  PASS ' : '  FAIL ') + name); if (!pass) ok = false; }
-  const helper = /context helper ready \(event-driven\)/.test(log) ? 'event-driven (window events + cursor text)' : /falling back to polling/.test(log) ? 'fallback (titles only)' : 'not observed';
+  const helper = /context helper ready \(event-driven\)/.test(log) ? 'event-driven (window events + cursor text)' : /falling back to polling|context helper exited/.test(log) ? 'fallback (titles only)' : 'not observed';
   console.log('  INFO context helper: ' + helper + (process.platform === 'win32' ? '' : ' (Windows only)'));
   console.log('\nscreenshots + log: ' + shots);
   process.exit(ok && code === 0 ? 0 : 1);

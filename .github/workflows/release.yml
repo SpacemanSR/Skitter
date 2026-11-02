@@ -90,6 +90,15 @@ jobs:
       - name: Ranking quality gate
         run: node tools/eval.js --roots tests/fixtures/Documents,tests/fixtures/Desktop --cases tools/cases/fixtures.json --model model --min-top1 0.85
 
+      - name: Context helper compiles and answers on Windows
+        timeout-minutes: 3
+        shell: pwsh
+        run: |
+          $out = "ping`nquit`n" | powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -STA -File src/winhelper.ps1 2>&1 | Out-String
+          Write-Host $out
+          if ($out -notmatch '"t":"ready"') { throw "context helper did not start" }
+          if ($out -notmatch '"t":"pong"') { throw "context helper did not answer" }
+
       - name: Build installer + portable zip (signed when Azure is configured)
         run: node tools/build-win.js --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
 

@@ -7,7 +7,7 @@ Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $refs = @(
   [System.Windows.Automation.AutomationElement].Assembly.Location,
-  [System.Windows.Automation.TextPatternRangeEndpoint].Assembly.Location
+  [System.Windows.Automation.ControlType].Assembly.Location   # UIAutomationTypes (holds the Text.* enums)
 )
 Add-Type -ReferencedAssemblies $refs -TypeDefinition @'
 using System;
