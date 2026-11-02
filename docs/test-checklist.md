@@ -26,7 +26,9 @@ Before you start: open `%APPDATA%\Skitter\gofer.log` in Notepad. Most checks say
 ## The card
 - [ ] Click the card: the file opens in its usual app.
 - [ ] Right-click the card: Explorer opens with the file selected.
-- [ ] Click Skitter while the card is up: he goes back and returns a different file.
+- [ ] Click Skitter while the card is up: the card steps aside and the task box opens.
+- [ ] Click "Not this one" on the card: he goes back and returns a different file.
+- [ ] Open a file from the card, then click Skitter again: the task box opens and takes your typing.
 - [ ] Ignore the card: it fades after about 14 seconds.
 - [ ] Clicks anywhere else on the screen pass through to your apps (including over the empty area near the shelf).
 

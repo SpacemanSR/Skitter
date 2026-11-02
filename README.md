@@ -9,7 +9,8 @@ A little yellow robot who lives on the right edge of your screen and fetches the
 | Click him, type, press Enter | Runs down the edge, climbs into the folder, comes back with a file (about 5–6 s) |
 | Click the card | Opens the file |
 | Right-click the card | Shows it in Explorer |
-| Click him while the card is up | "Not that one": goes back for the next best |
+| Click him while the card is up | Card steps aside, task box opens for a new job |
+| "Not this one" on the card | Goes back for the next best |
 | Ignore the card / press Esc | Soft no; the card fades after 14 s |
 | Drag him up or down | Moves his shelf to your eyeline |
 | He didn't find it | Right-click › "He missed a file", pick the file: he says why, fixes what he can, and learns |

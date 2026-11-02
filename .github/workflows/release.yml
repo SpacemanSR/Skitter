@@ -110,6 +110,11 @@ jobs:
       - name: Smoke test the packaged app
         run: node tools/smoke.js release/win-unpacked/Skitter.exe
 
+      - name: Click test (real mouse and keyboard on the packaged app)
+        timeout-minutes: 5
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/click-test.ps1 -Exe release/win-unpacked/Skitter.exe
+
       - name: Check the signature
         if: env.AZURE_SIGNING_ACCOUNT != ''
         shell: pwsh
