@@ -249,6 +249,13 @@ function applyInteractive() {
   // re-shown or loses its top spot, and then he stops answering clicks while we think he's fine.
   const now = Date.now();
   if (want !== interactive || now - lastApplied > 1000) {
+    if (want !== interactive) {
+      // While the pointer is over him or his card the window can take focus, so a click on him activates
+      // it the normal Windows way and the task box gets the keyboard. Asking for focus after the click
+      // fails whenever another app (a document that just opened, a dialog) holds the foreground.
+      if (want) win.setFocusable(true);
+      else if (rendererMode !== 'ask' && !win.isFocused()) win.setFocusable(false);
+    }
     interactive = want; lastApplied = now;
     win.setIgnoreMouseEvents(!want, { forward: !process.env.GOFER_NO_FORWARD });
   }
