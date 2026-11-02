@@ -26,6 +26,9 @@ $log = Join-Path $data 'gofer.log'
 $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 Write-Host "work area $($wa.X),$($wa.Y) $($wa.Width)x$($wa.Height)"
 
+# Earlier pipeline steps open the test spreadsheet on a runner with no Excel, which leaves Windows'
+# "Open with" dialog holding the keyboard; start from a clean desktop.
+Get-Process OpenWith -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 # Something to steal the foreground the way a real document app does after the card is clicked.
 $p = if ($AppArg) { Start-Process -FilePath $Exe -ArgumentList $AppArg -WorkingDirectory $root -PassThru } else { Start-Process -FilePath $Exe -PassThru }
 function Lines { if (Test-Path $log) { Get-Content $log } else { @() } }
