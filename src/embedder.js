@@ -94,7 +94,9 @@ class Embedder {
         ort.env.wasm.numThreads = 1;          // background work; keep one core
         ort.env.logLevel = 'error';
         const wasmDir = path.dirname(require.resolve('onnxruntime-web')) + path.sep;
-        ort.env.wasm.wasmPaths = wasmDir;
+        // a file:// URL, not a path: on Windows a bare C:\... path is read as a URL with scheme "c:" and the runtime refuses to load
+        const { pathToFileURL } = require('url');
+        ort.env.wasm.wasmPaths = pathToFileURL(wasmDir).href.replace(/\/?$/, '/');
         this.tok = new WordPiece(fs.readFileSync(path.join(this.dir, MODEL_FILES.vocab.file), 'utf8'));
         const modelBytes = fs.readFileSync(path.join(this.dir, MODEL_FILES.model.file));
         this.session = await ort.InferenceSession.create(modelBytes, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });

@@ -69,6 +69,9 @@ jobs:
           else
             node tools/fetch-model.js
             echo "new_lock=true" >> "$GITHUB_OUTPUT"
+            echo "----- model.lock.json (commit this file) -----"
+            cat model.lock.json
+            echo "----- end model.lock.json -----"
           fi
 
       - name: Keep the new model lock (first run only; commit it)
