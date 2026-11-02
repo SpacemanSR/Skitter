@@ -16,7 +16,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node tools/fetch-model.js --require-lock
-      - name: Click test (from source)
+      - name: Build (unsigned, not published)
+        run: node tools/build-win.js --publish never
+      - name: Click test (the packaged app)
         timeout-minutes: 5
         shell: powershell
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/click-test.ps1 -Exe node_modules/electron/dist/electron.exe -AppArg .
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/click-test.ps1 -Exe release/win-unpacked/Skitter.exe
