@@ -3,6 +3,7 @@
 #   Round 2: another app has the foreground; click him -> the task box opens again (the 0.3.1 bug), fetch
 #   Round 3: with the card still up, click him -> the task box opens again; fetch; "Not this one" -> retry
 #   Round 4: a PDF with a preview: hover the picture (card opens wide), glide down, click "click to open"
+#   Round 5: live session: Ctrl+Alt+L, open documents in Notepad, he searches on his own; shelf click; Ctrl+Alt+L ends it
 # Usage: powershell -File tools/click-test.ps1 -Exe <Skitter.exe | electron.exe> [-AppArg .]
 param([Parameter(Mandatory = $true)][string]$Exe, [string]$AppArg = '')
 $ErrorActionPreference = 'Stop'
@@ -92,6 +93,34 @@ try {
       }
     }
   }
+  # Round 5: live session. Ctrl+Alt+L starts it; he follows the documents opened in Notepad and searches on his
+  # own. Whether a given fixture earns a trip or a shelf spot depends on the ranker, so those are reported, and
+  # only the parts that must always work are checked.
+  WaitFor 'idle' { (Mode) -eq 'idle' } 25 | Out-Null
+  Get-Process OpenWith, notepad -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Start-Sleep 1
+  [System.Windows.Forms.SendKeys]::SendWait('^%l')
+  Check 'round 5: Ctrl+Alt+L starts a live session' (WaitFor 'live' { (Lines | Select-String '\[live\] started') } 5)
+  $docs = 'Documents\Projects\podcast_prep_notes.txt', 'Documents\Projects\harvest_market_pitch.txt', 'Documents\Games\card_game_rules.txt', 'Desktop\todo.txt'
+  foreach ($d in $docs) {
+    Start-Process notepad.exe (Join-Path $root ('tests\fixtures\' + $d)); Start-Sleep 13
+    # if he brought a card, wave it off (click him, Esc the box) so he keeps following
+    if ((Mode) -eq 'present') { ClickHim; Start-Sleep -Milliseconds 600; [System.Windows.Forms.SendKeys]::SendWait('{ESC}'); Start-Sleep 1 }
+  }
+  $liveLines = Lines | Select-String '\[live\] (trip|shelf|too weak|nothing)'
+  $liveLines | ForEach-Object { Write-Host "  live: $_" }
+  Check 'round 5: he searched on his own as documents changed' ($liveLines.Count -ge 2)
+  $shelf = Lines | Select-String '\[live\] shelf'
+  if ($shelf -and (Mode) -eq 'idle') {
+    $zz = Zones; $chip = $zz | Where-Object { $_[2] -lt 300 -and $_[2] -gt 100 -and $_[3] -lt 200 } | Select-Object -Last 1
+    if ($chip) {
+      Write-Host "click shelf at $($chip[0] + [int]($chip[2] / 2)),$($chip[1] + $chip[3] - 26)"
+      [M]::Click($wa.X + $chip[0] + [int]($chip[2] / 2), $wa.Y + $chip[1] + $chip[3] - 26)
+      Check 'round 5: clicking a shelf item hands over its card' (WaitFor 'card' { (Mode) -eq 'present' } 4)
+    }
+  } else { Write-Host 'INFO no shelf item this run (fixtures are small); shelf click not exercised' }
+  [System.Windows.Forms.SendKeys]::SendWait('^%l')
+  Check 'round 5: Ctrl+Alt+L ends the session' (WaitFor 'end' { (Lines | Select-String '\[live\] ended') } 5)
 } finally {
   Lines | Select-String -NotMatch '\[zones\]' | Select-Object -Last 40 | ForEach-Object { Write-Host "  log: $_" }
   Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
@@ -99,5 +128,5 @@ try {
   Get-Process electron, Skitter -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 $failed = $results | Where-Object { -not $_.Pass }
-if ($failed -or $results.Count -lt 12) { Write-Host "click test failed"; exit 1 }
+if ($failed -or $results.Count -lt 15) { Write-Host "click test failed"; exit 1 }
 Write-Host "click test passed"

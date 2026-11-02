@@ -23,6 +23,13 @@ Before you start: open `%APPDATA%\Skitter\gofer.log` in Notepad. Most checks say
 - [ ] He doesn't go again within 4 minutes.
 - [ ] He never brings back the document you have open.
 
+## Live session
+- [ ] Ctrl+Alt+L (or right-click › Start live session): a green light appears on his dome and the status says the session started.
+- [ ] Open three related documents in turn, a minute or so each. He makes at most one trip per 90 seconds; other finds appear as chips under "Found while you work".
+- [ ] Click a chip: its card appears without a trip. × on a chip removes it.
+- [ ] He never suggests the document you have open, or the same file twice.
+- [ ] Ctrl+Alt+L again: the light goes out and the status shows minutes, found and kept.
+
 ## The card
 - [ ] Click the card: the file opens in its usual app.
 - [ ] Right-click the card: Explorer opens with the file selected.

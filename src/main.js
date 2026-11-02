@@ -1,7 +1,7 @@
 'use strict';
 /* Skitter — main process. Owns the overlay window, tray, context sensors and the human-readable log.
    All indexing, search, embeddings and learning live in the engine process (engine/worker.js). */
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, clipboard, shell, dialog, nativeImage, utilityProcess } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, clipboard, shell, dialog, nativeImage, utilityProcess, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -134,6 +134,8 @@ function buildMenu() {
   const auto = sum.byMode && sum.byMode.auto ? sum.byMode.auto : null;
   const multi = screen.getAllDisplays().length > 1;
   return Menu.buildFromTemplate([
+    { label: live.on ? 'End live session (' + liveSummary() + ')' : 'Start live session', accelerator: 'CommandOrControl+Alt+L', click: () => setLive(!live.on) },
+    { type: 'separator' },
     { label: 'Fetch something…', click: () => send('ask', {}) },
     { type: 'separator' },
     { label: 'Go looking on his own', type: 'checkbox', checked: !!settings.get('autoMode'), click: (i) => settings.set('autoMode', i.checked) },
@@ -206,6 +208,7 @@ function searchRequest(mode, extra) {
 
 // ---------- unassigned trips: the search happens first, the walk only delivers it ----------
 async function autoCheck() {
+  if (live.on) return; // the live session does its own, faster checks
   if (!win || autoBusy || !settings.get('autoMode') || !engineStats.ready || rendererMode !== 'idle') return;
   const snap = context.snapshot();
   if (!snap.cleanTitle && !current.path) return;
@@ -226,6 +229,75 @@ async function autoCheck() {
   } catch (e) { log.debug('auto search failed', e.message); }
   autoBusy = false;
 }
+
+// ---------- live session: he works alongside you ----------
+/* While it's on he follows each document you settle on and the text you're writing, and searches again whenever
+   either changes. A strong match gets a full trip (at most one every 90 s); a decent one goes quietly onto his shelf
+   (three chips beside him) for when you want it. Nothing is suggested twice in a session. */
+const LIVE = { settleMs: 5000, minGapMs: 10000, tripGapMs: 90000, idleEndMs: 30 * 60000, shelfMax: 3 };
+const live = { on: false, startedAt: 0, lastKey: '', lastSearchAt: 0, lastTripAt: 0, lastChangeAt: 0, busy: false, shelf: [], seen: new Set(), found: 0, kept: 0 };
+function liveSummary() {
+  const min = Math.max(1, Math.round((Date.now() - live.startedAt) / 60000));
+  return min + ' min, ' + live.found + ' found' + (live.kept ? ', ' + live.kept + ' kept' : '');
+}
+function setLive(on) {
+  if (on === live.on) return;
+  if (on) {
+    Object.assign(live, { on: true, startedAt: Date.now(), lastKey: '', lastSearchAt: 0, lastTripAt: 0, lastChangeAt: Date.now(), shelf: [], seen: new Set(), found: 0, kept: 0 });
+    log.debug('[live] started');
+    send('live', { on: true, note: 'Live session: I\u2019ll keep up with what you\u2019re working on' });
+  } else {
+    const note = 'Live session ended \u00b7 ' + liveSummary();
+    log.debug('[live] ended', liveSummary());
+    live.on = false; live.shelf = [];
+    send('shelf', []); send('live', { on: false, note });
+  }
+}
+function pushShelf() { send('shelf', live.shelf.map((p) => ({ id: p.id, name: p.name, ext: p.ext, reason: p.reason, path: p.path }))); }
+async function liveCheck() {
+  if (!win || live.busy || !engineStats.ready) return;
+  const now = Date.now();
+  if (now - live.lastChangeAt > LIVE.idleEndMs) { setLive(false); return; }
+  if (rendererMode !== 'idle') return;
+  const snap = context.snapshot();
+  if (!snap.cleanTitle && !current.path) return;
+  const key = snap.title + '|' + (snap.focusedText || '').slice(-200);
+  if (key !== live.lastKey && live.pendingKey !== key) { live.pendingKey = key; live.lastChangeAt = now; }
+  if (key === live.lastKey) return;
+  if (now - snap.titleSince < LIVE.settleMs || now - live.lastChangeAt < 2500) return; // let you settle; let typing pause
+  if (now - live.lastSearchAt < LIVE.minGapMs) return;
+  live.lastKey = key; live.lastSearchAt = now; live.busy = true;
+  try {
+    const res = await engine.call('search', searchRequest('live', { exclude: [...live.seen] }), 15000);
+    if (!live.on) return;
+    if (!res || !res.found) { log.debug('[live] nothing for', JSON.stringify(snap.cleanTitle || '')); return; }
+    const p = res.proposal, bar = res.threshold != null ? res.threshold : 0.5;
+    if (live.seen.has(p.path)) return;
+    if (p.prob >= bar && now - live.lastTripAt > LIVE.tripGapMs && rendererMode === 'idle') {
+      live.seen.add(p.path); live.found++; live.lastTripAt = now;
+      rememberProposal(p); pendingAuto = { res, at: now };
+      log.debug('[live] trip →', p.name, 'p=' + p.prob, 'bar ' + bar);
+      send('auto-trip', { live: true });
+    } else if (p.prob >= Math.max(0.12, bar * 0.45)) {
+      live.seen.add(p.path); live.found++;
+      rememberProposal(p);
+      live.shelf.unshift(p); if (live.shelf.length > LIVE.shelfMax) live.shelf.length = LIVE.shelfMax;
+      log.debug('[live] shelf ←', p.name, 'p=' + p.prob, 'bar ' + bar);
+      pushShelf();
+    } else log.debug('[live] too weak:', p.name, 'p=' + p.prob, 'bar ' + bar);
+  } catch (e) { log.debug('[live] search failed', e.message); }
+  finally { live.busy = false; }
+}
+ipcMain.handle('gofer:shelf-take', (_e, id) => {
+  const i = live.shelf.findIndex((p) => p.id === id); if (i < 0) return null;
+  const [p] = live.shelf.splice(i, 1); pushShelf(); return p;
+});
+ipcMain.on('gofer:shelf-drop', (_e, id) => {
+  const i = live.shelf.findIndex((p) => p.id === id); if (i < 0) return;
+  const [p] = live.shelf.splice(i, 1); pushShelf();
+  log.outcome(p.id, 'dismiss'); engine.call('outcome', { id: p.id, outcome: 'dismiss' }).catch(() => {});
+});
+ipcMain.on('gofer:live', (_e, on) => setLive(!!on));
 
 function rememberProposal(p) {
   proposalPaths.set(p.id, p); if (proposalPaths.size > 200) proposalPaths.delete(proposalPaths.keys().next().value);
@@ -306,7 +378,7 @@ ipcMain.handle('gofer:state', () => ({ ready: engineStats.ready, count: engineSt
 ipcMain.handle('gofer:fetch', async (_e, req) => {
   const mode = (req && req.mode) || 'task';
   try {
-    if (mode === 'auto' && pendingAuto && Date.now() - pendingAuto.at < 120000 && !(req.exclude && req.exclude.length)) { const r = pendingAuto.res; pendingAuto = null; return r; }
+    if ((mode === 'auto' || mode === 'live') && pendingAuto && Date.now() - pendingAuto.at < 120000 && !(req.exclude && req.exclude.length)) { const r = pendingAuto.res; pendingAuto = null; return r; }
     pendingAuto = null;
     const request = searchRequest(mode, { task: req.task || null, exclude: req.exclude || [] });
     if (mode === 'task') lastRequest = Object.assign({}, request, { exclude: [] });
@@ -351,6 +423,7 @@ ipcMain.handle('gofer:decide', async (_e, d) => {
   log.outcome(d.id, d.outcome);
   engine.call('outcome', { id: d.id, outcome: d.outcome }).catch((e) => log.debug('outcome failed', e.message));
   if (!p) return;
+  if (live.on && (d.outcome === 'accept' || d.outcome === 'reveal')) live.kept++;
   if (d.outcome === 'accept') { const err = await shell.openPath(p.path); if (err) log.debug('open failed', err); setTimeout(reassertOverlay, 1500); setTimeout(reassertOverlay, 4000); }
   else if (d.outcome === 'reveal') shell.showItemInFolder(p.path);
 });
@@ -436,6 +509,9 @@ app.whenReady().then(async () => {
     screen.on('display-removed', relayout);
 
     setInterval(autoCheck, 4000);
+    setInterval(() => { if (live.on) liveCheck(); }, 1500);
+    if (process.env.GOFER_LIVE) setTimeout(() => setLive(true), 1500);
+    try { globalShortcut.register('CommandOrControl+Alt+L', () => setLive(!live.on)); } catch (e) { log.debug('live shortcut unavailable', e.message); }
     setupUpdates();
     setInterval(() => engine.call('rescan', {}).catch(() => {}), 6 * 3600 * 1000); // safety net behind the folder watcher
     if (settings.get('firstRun')) {
@@ -450,4 +526,5 @@ app.whenReady().then(async () => {
 
 app.on('second-instance', () => send('ask', {}));
 app.on('window-all-closed', () => { /* tray app: keep running */ });
+app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch (e) {} });
 app.on('before-quit', () => { app.isQuitting = true; if (context) context.stop(); if (engine) engine.call('shutdown', {}, 2000).catch(() => {}); });

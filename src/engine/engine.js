@@ -362,11 +362,13 @@ class Engine extends EventEmitter {
   }
 
   // ---------- search ----------
-  /* req: { mode: 'task'|'auto', task, title, cleanTitle, focusedText, clip, currentPath, exclude[] } */
+  /* req: { mode: 'task'|'auto'|'live', task, title, cleanTitle, focusedText, clip, currentPath, exclude[] } */
   async search(req) {
     await this.whenReady();
     const t0 = Date.now();
-    const mode = req.mode === 'auto' ? 'auto' : 'task';
+    // live: a live session. Reads your context like 'auto', but always returns its best guess (with the bar),
+    // so the host can choose between a full trip, a quiet spot on the shelf, or nothing.
+    const mode = req.mode === 'auto' || req.mode === 'live' ? req.mode : 'task';
     const now = Date.now();
     const currentText = req.currentPath ? (await this.readText(req.currentPath)) : '';
     const focused = String(req.focusedText || '').slice(-2500);
@@ -382,7 +384,7 @@ class Engine extends EventEmitter {
     // exclusions: current file, the caller's list, and (when unassigned) things opened in the last 15 minutes
     const excludePaths = new Set((req.exclude || []).map((p) => p.toLowerCase()));
     if (req.currentPath) excludePaths.add(req.currentPath.toLowerCase());
-    if (mode === 'auto') for (const r of this.db.prepare('SELECT DISTINCT path FROM opens WHERE ts > ?').all(now - 15 * 60000)) excludePaths.add(r.path.toLowerCase());
+    if (mode !== 'task') for (const r of this.db.prepare('SELECT DISTINCT path FROM opens WHERE ts > ?').all(now - 15 * 60000)) excludePaths.add(r.path.toLowerCase());
     const titleLower = String(req.title || '').toLowerCase();
 
     const cands = new Map(); // docId -> candidate
@@ -522,7 +524,7 @@ class Engine extends EventEmitter {
     this.db.prepare('INSERT OR REPLACE INTO proposals (id, ts, mode, path, prob, features, ctx) VALUES (?,?,?,?,?,?,?)')
       .run(id, now, mode, best.doc.path, best.p, JSON.stringify(best.f), JSON.stringify(ctx));
     return {
-      found: true, ms: Date.now() - t0, query: q.display, alternativesLeft: scored.length - 1,
+      found: true, ms: Date.now() - t0, query: q.display, alternativesLeft: scored.length - 1, threshold: +threshold.toFixed(3),
       proposal: { id, ts: now, mode, query: q.display, path: best.doc.path, name: best.doc.name, ext: best.doc.ext, dir: best.doc.dir, dirLabel: best.doc.dir.split(/[\\/]/).filter(Boolean).slice(-2).join(' › '),
         mtime: best.doc.mtime, size: best.doc.size, prob: +best.p.toFixed(3), features: best.f, matched: best.matched.map((t) => q.words[t] || t), snippet, reason },
       top: scored.slice(0, 5).map((s) => ({ name: s.doc.name, path: s.doc.path, p: +s.p.toFixed(3), f: s.f }))
@@ -535,7 +537,7 @@ class Engine extends EventEmitter {
     const cur = req.currentPath ? path.basename(req.currentPath) : (req.cleanTitle || 'this');
     switch (k) {
       case 'coopen': return 'You usually open this alongside ' + cur;
-      case 'sem': case 'lexSem': return mode === 'auto' ? 'Close to what you’re working on' : 'Close in meaning to what you asked';
+      case 'sem': case 'lexSem': return mode !== 'task' ? 'Close to what you’re working on' : 'Close in meaning to what you asked';
       case 'openedRecency': return 'You had this open recently';
       case 'sameFolder': return 'Sits next to ' + cur;
       case 'accepts': return 'You kept this one before';
@@ -624,7 +626,7 @@ class Engine extends EventEmitter {
     for (const r of rows) { const l = labelFor(r.outcome); if (!l) continue; ex.push({ features: JSON.parse(r.features), label: l.label, weight: l.weight, mode: r.mode }); }
     this.ranker = new Ranker(Object.assign(this.ranker.toJSON(), {}));
     this.ranker.train(ex);
-    this.ranker.calibrate(ex.filter((e) => e.mode === 'auto'), this.autoTarget);
+    this.ranker.calibrate(ex.filter((e) => e.mode === 'auto' || e.mode === 'live'), this.autoTarget);
     DB.setMeta(this.db, 'ranker', this.ranker.toJSON());
     return this.ranker.toJSON();
   }

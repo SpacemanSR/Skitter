@@ -12,9 +12,12 @@ A little yellow robot who lives on the right edge of your screen and fetches the
 | Click him while the card is up | Card steps aside, task box opens for a new job |
 | "Not this one" on the card | Goes back for the next best |
 | Ignore the card / press Esc | Soft no; the card fades after 14 s |
+| Right-click › Start live session, or Ctrl+Alt+L | He works alongside you: follows each document and what you type, searches as it changes, brings strong matches and stacks good ones on a shelf beside him (green light = on) |
 | Drag him up or down | Moves his shelf to your eyeline |
 | He didn't find it | Right-click › "He missed a file", pick the file: he says why, fixes what he can, and learns |
 | Right-click him, or the tray icon | Settings: folders, unassigned trips, meaning search, pace, screen, start with Windows, stats |
+
+**Live sessions.** Switch one on when you start working. He checks again a few seconds after you settle on a document or pause typing. A match that clears his bar gets a trip and a card (at most one every 90 s); a decent one goes onto the shelf as a chip you click when you're ready (× drops it and teaches him). Nothing is suggested twice in a session, never the file you have open. Ends with Ctrl+Alt+L, the menu, or after 30 minutes with nothing changing.
 
 **Unassigned trips.** When you stay on one document for 20 s, he works out which file it is, reads it and the text around your cursor, and searches. He only goes if the match clears a bar that adjusts itself so that at least 60% of unassigned trips are ones you keep. At most one every 4 minutes.
 

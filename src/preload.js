@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('gofer', {
   mode: (m) => ipcRenderer.send('gofer:mode', m),
   hitZones: (z) => ipcRenderer.send('gofer:zones', z),
   click: (c) => ipcRenderer.send('gofer:click', c),
+  shelfTake: (id) => ipcRenderer.invoke('gofer:shelf-take', id),
+  shelfDrop: (id) => ipcRenderer.send('gofer:shelf-drop', id),
+  live: (on) => ipcRenderer.send('gofer:live', !!on),
   getState: () => ipcRenderer.invoke('gofer:state'),
   saveUi: (ui) => ipcRenderer.send('gofer:ui', ui),
   on: (channel, fn) => { const h = (_e, data) => fn(data); ipcRenderer.on('gofer:' + channel, h); return () => ipcRenderer.removeListener('gofer:' + channel, h); }

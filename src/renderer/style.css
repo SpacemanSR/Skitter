@@ -16,6 +16,19 @@ body { font-family: var(--font); color: var(--ink); -webkit-user-select: none; u
 #stage.grab { cursor: grabbing; }
 .hidden { display: none !important; }
 
+/* live session shelf: what he found but didn't make a trip for */
+#shelf { position: fixed; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.chip { display: flex; align-items: center; gap: 8px; max-width: 250px; background: var(--panel); border: 1px solid var(--panel-edge);
+  border-radius: 10px; padding: 6px 6px 6px 8px; font-size: 12.5px; color: var(--ink); cursor: pointer;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3)); animation: chipIn 320ms cubic-bezier(.2,1.4,.3,1); }
+.chip:hover { border-color: rgba(241,200,107,0.55); }
+.chip .cx { flex: none; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: var(--accent-ink); background: var(--accent); border-radius: 4px; padding: 2px 4px; }
+.shelf-head { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: rgba(120, 235, 160, 0.85); padding-right: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.chip .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip .x { flex: none; width: 20px; height: 20px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-dim); font: inherit; font-size: 14px; line-height: 1; cursor: pointer; }
+.chip .x:hover { background: rgba(255,255,255,0.1); color: var(--ink); }
+@keyframes chipIn { from { transform: translateX(24px) scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
 /* speech bubbles */
 .bubble { position: fixed; z-index: 5; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35)); }
 .bubble-body {

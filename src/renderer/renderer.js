@@ -10,7 +10,8 @@
   const el = { hello: $('hello'), ask: $('ask'), askInput: $('askInput'), status: $('status'), card: $('card'),
     cardIcon: $('cardIcon'), cardName: $('cardName'), cardMeta: $('cardMeta'), cardReason: $('cardReason'),
     cardSnippet: $('cardSnippet'), cardTerms: $('cardTerms'), cardTimer: $('cardTimer'),
-    cardPreview: $('cardPreview'), cardImg: $('cardImg'), cardPreviewNote: $('cardPreviewNote'), cardRetry: $('cardRetry') };
+    cardPreview: $('cardPreview'), cardImg: $('cardImg'), cardPreviewNote: $('cardPreviewNote'), cardRetry: $('cardRetry'), shelf: $('shelf') };
+  let liveOn = false, shelfItems = [];
 
   // ---------- state ----------
   const c = { x: 0, y: 0, rot: 0, facing: -1, pose: 'sit', walk: null, carrying: false, armRaise: 0, blink: 0,
@@ -296,7 +297,7 @@
     if (!bridge.hitZones || now - lastZonesAt < 80) return;
     const z = [];
     if (c.visible) { const b = bodyCenter(); z.push([Math.round(b.x - 36), Math.round(b.y - 36), 72, 72]); }
-    for (const e of [el.card, el.ask]) if (!e.classList.contains('hidden')) { const r = e.getBoundingClientRect(); if (r.width) z.push([Math.round(r.left) - 6, Math.round(r.top) - 6, Math.round(r.width) + 12, Math.round(r.height) + 12]); }
+    for (const e of [el.card, el.ask, el.shelf]) if (!e.classList.contains('hidden')) { const r = e.getBoundingClientRect(); if (r.width) z.push([Math.round(r.left) - 6, Math.round(r.top) - 6, Math.round(r.width) + 12, Math.round(r.height) + 12]); }
     const key = JSON.stringify(z);
     if (key !== lastZones) { lastZones = key; lastZonesAt = now; bridge.hitZones(z); }
   }
@@ -342,7 +343,49 @@
     else if (!was) { if (mode === 'idle') c.pose = 'sit'; showStatus('Ready · ' + docCount.toLocaleString() + ' files indexed', 2600); }
   });
   bridge.on('status', (m) => { if (m && m.text) showStatus(m.text, 6000); });
-  bridge.on('auto-trip', () => { if (mode === 'idle' && !dragging) runTrip('auto', null, [], false); });
+  bridge.on('auto-trip', (d) => { if (mode === 'idle' && !dragging) runTrip(d && d.live ? 'live' : 'auto', null, [], false); });
+  // ---------- live session ----------
+  bridge.on('live', (s) => { liveOn = !!s.on; if (s.note) showStatus(s.note, 3200); if (!liveOn) renderShelf([]); });
+  bridge.on('shelf', (items) => renderShelf(items || []));
+  function renderShelf(items) {
+    shelfItems = items;
+    el.shelf.innerHTML = '';
+    if (items.length) { const h = document.createElement('div'); h.className = 'shelf-head'; h.textContent = 'Found while you work'; el.shelf.appendChild(h); }
+    for (const it of items) {
+      const chip = document.createElement('div'); chip.className = 'chip'; chip.title = (it.reason ? it.reason + '\n' : '') + it.path;
+      const ext = document.createElement('span'); ext.className = 'cx'; ext.textContent = (it.ext || 'file').replace('.', '').toUpperCase().slice(0, 4);
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = it.name;
+      const x = document.createElement('button'); x.className = 'x'; x.type = 'button'; x.textContent = '\u00d7'; x.title = 'Not useful';
+      chip.append(ext, nm, x);
+      chip.addEventListener('mousedown', (e) => e.stopPropagation());
+      chip.addEventListener('mouseup', (e) => {
+        if (e.button !== 0) return; e.stopPropagation();
+        if (x.contains(e.target)) { bridge.shelfDrop(it.id); return; }
+        presentFromShelf(it.id);
+      });
+      el.shelf.appendChild(chip);
+    }
+    placeShelf(); syncInteractive();
+  }
+  function placeShelf() {
+    const show = shelfItems.length > 0 && mode === 'idle';
+    el.shelf.classList.toggle('hidden', !show);
+    if (!show) return;
+    const l = L();
+    el.shelf.style.right = (l.W - (l.standX - 40)) + 'px';
+    el.shelf.style.top = Math.min(l.H - el.shelf.offsetHeight - 8, c.y + 28) + 'px';
+  }
+  /* Hand over something from the shelf: he already has it, so no trip, just the card. */
+  async function presentFromShelf(id) {
+    if (mode !== 'idle') return;
+    const p = await bridge.shelfTake(id); if (!p || mode !== 'idle') return;
+    trip = { mode: 'live', task: null, excludes: [], fast: true, id: Date.now(), proposal: p, alternativesLeft: 1 };
+    mode = 'present'; c.pose = 'idle'; c.carrying = true; c.facing = -1;
+    const previewP = bridge.preview ? bridge.preview(p.id).catch(() => null) : null;
+    trip.previewP = previewP;
+    await tween(c, { armRaise: 1, paperAngle: -0.35 }, 260);
+    showCard(p, p.reason, previewP); syncInteractive();
+  }
   bridge.on('resize', () => resize());
   bridge.on('ask', () => { if (mode === 'idle' && !dragging) openAsk(); });
   let lastSentMode = null;
@@ -355,6 +398,16 @@
     ctx.fillStyle = '#8a6a44'; ctx.strokeStyle = '#4a2d18'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.roundRect(l.W - 50, l.perchY, 54, 7, [3, 0, 0, 3]); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(l.W - 44, l.perchY + 7); ctx.lineTo(l.W - 2, l.perchY + 26); ctx.lineTo(l.W - 2, l.perchY + 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  // a small pulsing light on his dome while a live session is on
+  function drawLiveLight(t) {
+    const up = c.rot + (c.lean || 0) * c.facing, d = 44 * c.scale;
+    const x = c.x + Math.sin(up) * d, y = c.y - Math.cos(up) * d, a = 0.55 + 0.45 * Math.sin(t * 3.2);
+    ctx.save();
+    ctx.fillStyle = 'rgba(80, 230, 140,' + (0.25 * a).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(90, 240, 150,' + (0.6 + 0.4 * a).toFixed(3) + ')'; ctx.strokeStyle = '#1f3b2a'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.restore();
   }
   function drawCreature(t) {
@@ -382,6 +435,8 @@
     if (c.visible && !c.inFolder) { if (c.rot === 0 && c.y > l.groundY - 1) CR.drawShadow(ctx, c.x, l.groundY + 1, 18 * c.scale); drawCreature(t); }
     for (let i = scraps.length - 1; i >= 0; i--) { const s = scraps[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 420 * dt; s.rot += s.vr * dt; if (s.y > l.groundY - 40) s.alpha -= dt * 4; if (s.alpha <= 0) scraps.splice(i, 1); else CR.drawScrap(ctx, s); }
     if (mode === 'present' && !el.card.classList.contains('hidden')) positionCard();
+    if (shelfItems.length) placeShelf();
+    if (liveOn && c.visible) drawLiveLight(t);
     reportZones(now);
     if (!el.status.classList.contains('hidden') && !indexReady) { el.status.style.left = Math.max(8, l.standX - 60 - el.status.offsetWidth) + 'px'; el.status.style.top = (c.y - 54) + 'px'; }
   }

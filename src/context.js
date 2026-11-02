@@ -77,7 +77,13 @@ class Context extends EventEmitter {
   mode() { return this._mode; }
 
   _startForeground() {
-    if (process.platform !== 'win32') { if (process.env.GOFER_FAKE_TITLE) this._onForeground('testapp', process.env.GOFER_FAKE_TITLE); return; }
+    if (process.platform !== 'win32') {
+      // test hook: GOFER_FAKE_TITLE="one title" or "first||second||third" (switches every GOFER_FAKE_EVERY ms)
+      const titles = String(process.env.GOFER_FAKE_TITLE || '').split('||').filter(Boolean);
+      if (titles.length) { let i = 0; this._onForeground('testapp', titles[0]);
+        if (titles.length > 1) this._timers.push(setInterval(() => { i = (i + 1) % titles.length; this._onForeground('testapp', titles[i]); }, +process.env.GOFER_FAKE_EVERY || 9000)); }
+      return;
+    }
     if (this.helperScript && fs.existsSync(this.helperScript)) this._spawnHelper(); else this._spawnPoller();
   }
 
