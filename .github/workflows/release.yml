@@ -48,9 +48,9 @@ jobs:
       STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -81,7 +81,7 @@ jobs:
 
       - name: Keep the new model lock (first run only; commit it)
         if: steps.model.outputs.new_lock == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: model-lock
           path: model.lock.json
@@ -125,7 +125,7 @@ jobs:
 
       - name: Upload build
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gofer-windows
           if-no-files-found: ignore
