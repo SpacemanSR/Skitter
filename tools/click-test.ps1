@@ -2,6 +2,7 @@
 #   Round 1: click him, type, Enter -> he fetches; click the card -> the file opens
 #   Round 2: another app has the foreground; click him -> the task box opens again (the 0.3.1 bug), fetch
 #   Round 3: with the card still up, click him -> the task box opens again; fetch; "Not this one" -> retry
+#   Round 4: a PDF with a preview: hover the picture (card opens wide), glide down, click "click to open"
 # Usage: powershell -File tools/click-test.ps1 -Exe <Skitter.exe | electron.exe> [-AppArg .]
 param([Parameter(Mandatory = $true)][string]$Exe, [string]$AppArg = '')
 $ErrorActionPreference = 'Stop'
@@ -43,13 +44,13 @@ function Check($name, $ok) { $script:results += [pscustomobject]@{ Check = $name
 try {
   WaitFor 'index' { (Lines | Select-String 'scan done') -and (Zones) } 90 | Out-Null
   Start-Sleep 2
-  function Ask($label) {
+  function Ask($label, $query = 'budget') {
     ClickHim
     $ok = WaitFor 'task box' { (Mode) -eq 'ask' } 4
     Check "$label`: clicking him opens the task box" $ok
     if (-not $ok) { return $false }
     Start-Sleep -Milliseconds 500
-    [System.Windows.Forms.SendKeys]::SendWait('budget{ENTER}')
+    [System.Windows.Forms.SendKeys]::SendWait($query + '{ENTER}')
     $ok = WaitFor 'card' { (Mode) -eq 'present' } 20
     Check "$label`: what I typed reached the box and he came back with a file" $ok
     Start-Sleep 1
@@ -65,9 +66,29 @@ try {
       if (Ask 'round 3 (card still up)') {
         $z = Zones; $k = $z | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
         $before = (Lines | Select-String '\[mode\] trip').Count
-        Write-Host "click Not this one at $($k[0] + $k[2] - 50),$($k[1] + $k[3] - 18)"
-        [M]::Click($wa.X + $k[0] + $k[2] - 50, $wa.Y + $k[1] + $k[3] - 18)
+        Write-Host "click Not this one at $($k[0] + $k[2] - 50),$($k[1] + $k[3] - 24)"
+        [M]::Click($wa.X + $k[0] + $k[2] - 50, $wa.Y + $k[1] + $k[3] - 24)
         Check "'Not this one' sends him for another" (WaitFor 'retry' { (Lines | Select-String '\[mode\] trip').Count -gt $before } 4)
+        WaitFor 'card' { (Mode) -eq 'present' } 20 | Out-Null
+        Start-Sleep 1
+        # Round 4: a file with a picture. Hover the picture (the card opens wide), then move down to
+        # "click to open" the way a hand does and click it. 0.3.2 shrank the card on the way down.
+        if (Ask 'round 4 (file with a preview)' 'asteroid roguelike') {
+          Start-Sleep 2
+          $k = Zones | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
+          [M]::SetCursorPos($wa.X + $k[0] + [int]($k[2] / 2), $wa.Y + $k[1] + 70); Start-Sleep -Milliseconds 300
+          [M]::SetCursorPos($wa.X + $k[0] + [int]($k[2] / 2) + 2, $wa.Y + $k[1] + 72); Start-Sleep 1
+          $k = Zones | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
+          Check 'round 4: hovering the picture opens the card wide' ($k[2] -gt 500)
+          $x = $wa.X + $k[0] + 50; $y0 = $wa.Y + $k[1] + 80; $y1 = $wa.Y + $k[1] + $k[3] - 24
+          for ($i = 1; $i -le 25; $i++) { [M]::SetCursorPos($x, [int]($y0 + ($y1 - $y0) * $i / 25)); Start-Sleep -Milliseconds 25 }
+          Start-Sleep -Milliseconds 400
+          $k2 = Zones | Where-Object { $_[2] -gt 200 } | Select-Object -First 1
+          Write-Host "card on arrival at the footer: $($k2 -join ','); clicking at $x,$y1"
+          $happy = (Lines | Select-String '\[mode\] happy').Count
+          [M]::Click($x, $y1)
+          Check "round 4: 'click to open' opens the file" (WaitFor 'open' { (Lines | Select-String '\[mode\] happy').Count -gt $happy } 4)
+        }
       }
     }
   }
@@ -78,5 +99,5 @@ try {
   Get-Process electron, Skitter -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 $failed = $results | Where-Object { -not $_.Pass }
-if ($failed -or $results.Count -lt 8) { Write-Host "click test failed"; exit 1 }
+if ($failed -or $results.Count -lt 12) { Write-Host "click test failed"; exit 1 }
 Write-Host "click test passed"

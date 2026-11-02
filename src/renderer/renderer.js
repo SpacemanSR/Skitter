@@ -258,7 +258,8 @@
   el.card.addEventListener('mouseenter', pauseCardTimer);
   // hover the picture to open the card wide; click the picture (or anywhere on the card) to open the file
   el.cardPreview.addEventListener('mouseenter', () => { if (!el.cardPreview.classList.contains('hidden') && el.cardImg.getAttribute('src')) el.card.classList.add('wide'); });
-  el.card.addEventListener('mouseleave', () => el.card.classList.remove('wide'));
+  // Once wide it stays wide until you decide: shrinking it on the way out moved "click to open" out from
+  // under the pointer, so the click landed on empty screen.
   el.card.addEventListener('mouseleave', resumeCardTimer);
 
   // ---------- ask bubble ----------
@@ -295,7 +296,7 @@
     if (!bridge.hitZones || now - lastZonesAt < 80) return;
     const z = [];
     if (c.visible) { const b = bodyCenter(); z.push([Math.round(b.x - 36), Math.round(b.y - 36), 72, 72]); }
-    for (const e of [el.card, el.ask]) if (!e.classList.contains('hidden')) { const r = e.getBoundingClientRect(); if (r.width) z.push([Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]); }
+    for (const e of [el.card, el.ask]) if (!e.classList.contains('hidden')) { const r = e.getBoundingClientRect(); if (r.width) z.push([Math.round(r.left) - 6, Math.round(r.top) - 6, Math.round(r.width) + 12, Math.round(r.height) + 12]); }
     const key = JSON.stringify(z);
     if (key !== lastZones) { lastZones = key; lastZonesAt = now; bridge.hitZones(z); }
   }
