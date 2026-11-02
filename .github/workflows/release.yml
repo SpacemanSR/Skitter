@@ -18,6 +18,11 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish this version as a GitHub Release (installed copies update to it)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -100,7 +105,7 @@ jobs:
           if ($out -notmatch '"t":"pong"') { throw "context helper did not answer" }
 
       - name: Build installer + portable zip (signed when Azure is configured)
-        run: node tools/build-win.js --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        run: node tools/build-win.js --publish ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.publish) && 'always' || 'never' }}
 
       - name: Smoke test the packaged app
         run: node tools/smoke.js release/win-unpacked/Skitter.exe
