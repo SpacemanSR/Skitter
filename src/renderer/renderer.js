@@ -279,6 +279,16 @@
   function bodyCenter() { return { x: c.x + 26 * Math.sin(c.rot), y: c.y - 26 * Math.cos(c.rot) }; }
   function overCreature(x, y) { if (!c.visible) return false; const b = bodyCenter(); return Math.hypot(x - b.x, y - b.y) < 34; }
   function overDom(x, y) { const e = document.elementFromPoint(x, y); return !!(e && e !== document.body && e !== canvas && e !== document.documentElement); }
+  /* Where Skitter and his UI are, so the host can catch clicks there even if Windows never forwards mouse moves to us. */
+  let lastZones = '', lastZonesAt = 0;
+  function reportZones(now) {
+    if (!bridge.hitZones || now - lastZonesAt < 80) return;
+    const z = [];
+    if (c.visible) { const b = bodyCenter(); z.push([Math.round(b.x - 36), Math.round(b.y - 36), 72, 72]); }
+    for (const e of [el.card, el.ask]) if (!e.classList.contains('hidden')) { const r = e.getBoundingClientRect(); if (r.width) z.push([Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]); }
+    const key = JSON.stringify(z);
+    if (key !== lastZones) { lastZones = key; lastZonesAt = now; bridge.hitZones(z); }
+  }
   function syncInteractive() {
     const want = hover || overDom(mouse.x, mouse.y) || mode === 'ask' || !!dragging;
     if (want !== interactive) { interactive = want; bridge.setInteractive(want); }
@@ -352,6 +362,7 @@
     if (c.visible && !c.inFolder) { if (c.rot === 0 && c.y > l.groundY - 1) CR.drawShadow(ctx, c.x, l.groundY + 1, 18 * c.scale); drawCreature(t); }
     for (let i = scraps.length - 1; i >= 0; i--) { const s = scraps[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 420 * dt; s.rot += s.vr * dt; if (s.y > l.groundY - 40) s.alpha -= dt * 4; if (s.alpha <= 0) scraps.splice(i, 1); else CR.drawScrap(ctx, s); }
     if (mode === 'present' && !el.card.classList.contains('hidden')) positionCard();
+    reportZones(now);
     if (!el.status.classList.contains('hidden') && !indexReady) { el.status.style.left = Math.max(8, l.standX - 60 - el.status.offsetWidth) + 'px'; el.status.style.top = (c.y - 54) + 'px'; }
   }
 

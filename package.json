@@ -1,7 +1,7 @@
 {
   "name": "skitter",
   "productName": "Skitter",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A little yellow robot who lives on the edge of your screen and fetches the file you were about to go looking for.",
   "main": "src/main.js",
   "scripts": {

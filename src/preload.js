@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('gofer', {
   preview: (id) => ipcRenderer.invoke('gofer:preview', id),
   menu: (pt) => ipcRenderer.send('gofer:menu', pt),
   mode: (m) => ipcRenderer.send('gofer:mode', m),
+  hitZones: (z) => ipcRenderer.send('gofer:zones', z),
   getState: () => ipcRenderer.invoke('gofer:state'),
   saveUi: (ui) => ipcRenderer.send('gofer:ui', ui),
   on: (channel, fn) => { const h = (_e, data) => fn(data); ipcRenderer.on('gofer:' + channel, h); return () => ipcRenderer.removeListener('gofer:' + channel, h); }

@@ -104,7 +104,7 @@ function createOverlay() {
   win.setMenu(null);
   win.setAlwaysOnTop(true, 'screen-saver', 1);
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.setIgnoreMouseEvents(true, { forward: true });
+  win.setIgnoreMouseEvents(true, { forward: !process.env.GOFER_NO_FORWARD });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.once('ready-to-show', () => { win.showInactive(); if (process.env.GOFER_DEBUG) win.webContents.openDevTools({ mode: 'detach' }); });
   win.on('closed', () => { win = null; });
@@ -233,13 +233,29 @@ function rememberProposal(p) {
 }
 
 // ---------- IPC from the renderer ----------
-ipcMain.on('gofer:interactive', (_e, on) => { if (!win || on === interactive) return; interactive = on; win.setIgnoreMouseEvents(!on, { forward: true }); });
+/* Click-through: the window ignores the mouse except over Skitter, his card and his text box.
+   We decide that here by polling the cursor against the zones the renderer reports, instead of relying only on
+   Windows forwarding mouse moves to a click-through window (which some setups never do). */
+let zones = [], rendererWants = false;
+function applyInteractive() {
+  if (!win || win.isDestroyed()) return;
+  let inside = false;
+  if (zones.length) {
+    const p = screen.getCursorScreenPoint(), b = win.getBounds(), x = p.x - b.x, y = p.y - b.y;
+    inside = zones.some(([zx, zy, zw, zh]) => x >= zx && x <= zx + zw && y >= zy && y <= zy + zh);
+  }
+  const want = inside || rendererWants;
+  if (want !== interactive) { interactive = want; win.setIgnoreMouseEvents(!want, { forward: !process.env.GOFER_NO_FORWARD }); }
+}
+ipcMain.on('gofer:interactive', (_e, on) => { rendererWants = !!on; applyInteractive(); });
+ipcMain.on('gofer:zones', (_e, z) => { zones = Array.isArray(z) ? z.filter((r) => Array.isArray(r) && r.length === 4) : []; applyInteractive(); });
+setInterval(applyInteractive, 40);
 ipcMain.on('gofer:focus', (_e, on) => {
   if (!win) return;
   if (on) { win.setFocusable(true); win.focus(); win.webContents.focus(); }
   else { win.blur(); win.setFocusable(false); if (process.platform === 'win32') { win.hide(); win.showInactive(); } }
 });
-ipcMain.on('gofer:mode', (_e, m) => { rendererMode = m; });
+ipcMain.on('gofer:mode', (_e, m) => { if (m !== rendererMode) log.debug('[mode]', m); rendererMode = m; });
 ipcMain.on('gofer:menu', async () => {
   if (!win) return;
   await refreshStats();
