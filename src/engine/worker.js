@@ -26,6 +26,7 @@ const handlers = {
   async setRoots(a) { engine.setRoots(a.roots); engine.scan(); return true; },
   async diagnose(a) { return engine.diagnose(a); },
   async preview(a) { return engine.preview(a); },
+  async setTrace(a) { engine.traceFile = a.file || null; return true; },
   async setSemantic(a) { engine.semantic = !!a.on; if (a.on) engine.embedder.load().then((ok) => ok && engine._embedLoop()); return true; },
   async history(a) { return engine.history(a && a.limit); },
   async shutdown() { engine && engine.close(); setTimeout(() => process.exit(0), 50); return true; }

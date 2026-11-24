@@ -5,3 +5,4 @@ dist/
 model/
 smoke-shots/
 *.log
+logs/

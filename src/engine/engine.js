@@ -102,6 +102,7 @@ class Engine extends EventEmitter {
     this.maxEmbedChunks = opts.maxEmbedChunks || 60000;
     this.maxDocs = opts.maxDocs || 250000;
     this.semantic = opts.semantic !== false;
+    this.traceFile = opts.traceFile || null; // readable record of every search (see _writeTrace)
     this.autoTarget = opts.autoTarget || 0.6;
     this.embedder = new Embedder({ modelDir: opts.modelDir, log: (...a) => this.log('[embed]', ...a) });
     this.vectors = new VectorStore();
@@ -364,6 +365,13 @@ class Engine extends EventEmitter {
   // ---------- search ----------
   /* req: { mode: 'task'|'auto'|'live', task, title, cleanTitle, focusedText, clip, currentPath, exclude[] } */
   async search(req) {
+    const tr = {};
+    const res = await this._search(req, tr);
+    if (this.traceFile && !req.diagnosePath && tr.mode) { try { this._writeTrace(tr, res, req); } catch (e) { this.log('search log failed', e.message); } }
+    return res;
+  }
+
+  async _search(req, tr) {
     await this.whenReady();
     const t0 = Date.now();
     // live: a live session. Reads your context like 'auto', but always returns its best guess (with the bar),
@@ -378,6 +386,7 @@ class Engine extends EventEmitter {
       ? [{ text: req.task, weight: 1.6 }, { text: req.cleanTitle, weight: 0.3 }, { text: focusedTerms, weight: 0.3 }, { text: docTerms, weight: 0.2 }]
       : [{ text: req.cleanTitle, weight: 1.0 }, { text: focusedTerms, weight: 1.4 }, { text: docTerms, weight: 1.1 }, { text: req.clip, weight: 0.8 }];
     const q = Search.buildQuery(parts);
+    tr.mode = mode; tr.q = q; tr.focusedTerms = focusedTerms; tr.docTerms = docTerms;
     const semText = mode === 'task' ? String(req.task || '')
       : (focused.trim().length > 60 ? focused.slice(-900) : (currentText.trim().length > 60 ? currentText.slice(0, 1200) : [req.cleanTitle, req.clip].filter(Boolean).join('. ')));
 
@@ -417,8 +426,10 @@ class Engine extends EventEmitter {
     const nameWordCount = Math.max(1, String((mode === 'task' ? req.task : req.cleanTitle) || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3 && !Tokenize.STOP.has(w)).length);
     // 2) meaning
     let qv = null;
+    tr.nameWords = nameWords.slice(0, 12); tr.semText = semText;
+    tr.semState = !this.semantic ? 'meaning search is off' : !this.embedder.ready ? 'meaning model not loaded' : !this.vectors.count() ? 'no passages indexed by meaning yet' : semText.trim().length <= 2 ? 'nothing to embed' : null;
     if (this.embedder.ready && this.vectors.count() && semText.trim().length > 2) {
-      try { qv = (await this.embedder.embed([semText]))[0]; for (const r of this.vectors.searchDocs(qv, 60)) { const c = getCand(r.docId); c.sim = r.sim; c.chunkId = r.chunkId; } }
+      try { qv = (await this.embedder.embed([semText]))[0]; const near = this.vectors.searchDocs(qv, 60); tr.qv = qv; tr.explain = this.embedder.explain(semText); tr.near = near.slice(0, 6); for (const r of near) { const c = getCand(r.docId); c.sim = r.sim; c.chunkId = r.chunkId; } }
       catch (e) { this.log('semantic query failed', e.message); }
     }
     // 3) opened together with the current file
@@ -492,6 +503,7 @@ class Engine extends EventEmitter {
       scored.push({ doc: d, c, f, matched, p: this.ranker.prob(f) });
     }
     scored.sort((a, b) => b.p - a.p);
+    tr.scored = scored.slice(0, 5); tr.candidates = cands.size; tr.excluded = excludePaths.size;
     if (req.diagnosePath) {
       const i = scored.findIndex((x) => x.c.id === diagId);
       const hit = i >= 0 ? scored[i] : null;
@@ -529,6 +541,66 @@ class Engine extends EventEmitter {
         mtime: best.doc.mtime, size: best.doc.size, prob: +best.p.toFixed(3), features: best.f, matched: best.matched.map((t) => q.words[t] || t), snippet, reason },
       top: scored.slice(0, 5).map((s) => ({ name: s.doc.name, path: s.doc.path, p: +s.p.toFixed(3), f: s.f }))
     };
+  }
+
+  // ---------- search log ----------
+  /* One readable entry per search: what was asked, what the keyword search looked for, exactly what the meaning
+     model was given and how it cut it up, which passages it found closest (the source check), and the ranking. */
+  _writeTrace(tr, res, req) {
+    const W = []; const L = (s = '') => W.push(s);
+    const cut = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+    const pct = (x) => (x * 100).toFixed(0).padStart(3) + '%';
+    const stamp = new Date().toLocaleString('sv-SE').replace('T', ' ');
+    L('═'.repeat(100));
+    L(stamp + '   ' + ({ task: 'YOU ASKED', auto: 'ON HIS OWN', live: 'LIVE SESSION' }[tr.mode] || tr.mode) + '   (' + (res.ms != null ? res.ms : '?') + ' ms)');
+    if (tr.mode === 'task') L('  request:        "' + cut(req.task, 300) + '"');
+    if (req.cleanTitle) L('  window:         ' + cut(req.cleanTitle, 120) + (req.currentPath ? '   → ' + req.currentPath : ''));
+    if (tr.mode !== 'task') {
+      if (tr.docTerms) L('  from the open document: ' + tr.docTerms);
+      if (tr.focusedTerms) L('  from what you were typing: ' + tr.focusedTerms);
+      if (req.clip) L('  clipboard:      "' + cut(req.clip, 120) + '"');
+    }
+    L(); L('  1. KEYWORD SEARCH (words looked up in the index; heavier = counts more)');
+    const terms = Object.entries(tr.q.terms || {}).sort((a, b) => b[1] - a[1]);
+    L('     ' + (terms.length ? terms.map(([t, w]) => (tr.q.words[t] || t) + (tr.q.words[t] && tr.q.words[t] !== t ? ' [' + t + ']' : '') + ' ×' + (+w).toFixed(1)).join(',  ') : '(no usable words)'));
+    if (tr.nameWords && tr.nameWords.length) L('     file names checked for: ' + tr.nameWords.join(', '));
+    L(); L('  2. MEANING SEARCH');
+    if (tr.semState) L('     skipped: ' + tr.semState);
+    else {
+      L('     text given to the model (' + String(tr.semText).length + ' characters): "' + cut(tr.semText, 400) + '"');
+      const ex = tr.explain;
+      if (ex) {
+        L('     what the model read, ' + ex.count + ' pieces' + (ex.truncated ? ' (CUT OFF at its ' + ex.max + '-piece limit; the rest was not read)' : '') + ':');
+        const line = ex.pieces.join(' '); for (let i = 0; i < line.length; i += 96) L('       ' + line.slice(i, i + 96));
+        L('     ' + ex.split + ' piece(s) continue a split word (##)' + (ex.unknown ? ';  ' + ex.unknown + ' UNKNOWN piece(s), meaning lost there' : ';  nothing unknown'));
+      }
+      if (tr.qv) L('     became a fingerprint of ' + tr.qv.length + ' numbers; the first eight: [' + Array.from(tr.qv.slice(0, 8)).map((v) => v.toFixed(3)).join(', ') + ', …]');
+      L('     closest passages by meaning (similarity: 100% = same meaning; under ~30% is noise):');
+      const doc = this.db.prepare('SELECT name, dir FROM docs WHERE id = ?'), chunk = this.db.prepare('SELECT text FROM chunks WHERE id = ?');
+      if (!tr.near || !tr.near.length) L('       (none)');
+      for (const n of tr.near || []) {
+        const d = doc.get(n.docId) || { name: '?', dir: '' }; const ch = chunk.get(n.chunkId);
+        L('       ' + pct(n.sim) + '  ' + d.name + '   (' + d.dir.split(/[\\/]/).filter(Boolean).slice(-2).join(' › ') + ')');
+        if (ch) L('             "' + cut(ch.text, 170) + '"');
+      }
+    }
+    L(); L('  3. RANKING (' + (tr.candidates || 0) + ' files found by the searches above' + (tr.excluded ? ', ' + tr.excluded + ' left out: open now or already offered' : '') + ')');
+    if (!tr.scored || !tr.scored.length) L('     (nothing to rank)');
+    (tr.scored || []).forEach((s, i) => {
+      const f = s.f, why = [];
+      if (f.coverage) why.push('words ' + pct(f.coverage).trim()); if (f.nameHit) why.push('name ' + pct(f.nameHit).trim());
+      if (s.c.sim) why.push('meaning ' + pct(s.c.sim).trim()); if (f.coopen) why.push('opened together'); if (f.sameFolder) why.push('same folder');
+      if (f.openedRecency > 0.3) why.push('opened recently'); if (f.accepts) why.push('kept before'); if (f.rejects) why.push('turned down before');
+      L('     ' + (i + 1) + '. ' + pct(s.p) + ' sure   ' + s.doc.name + '   ← ' + (why.join(', ') || 'weak signals only') + (s.matched.length ? '   matched: ' + s.matched.map((t) => tr.q.words[t] || t).join(', ') : ''));
+    });
+    L();
+    if (res.found) L('  RESULT: brought ' + res.proposal.name + ' (' + pct(res.proposal.prob).trim() + ' sure' + (tr.mode !== 'task' ? ', bar ' + pct(res.threshold).trim() : '') + ')   ' + res.proposal.path);
+    else L('  RESULT: nothing' + (res.bestProb != null ? ' — best was ' + pct(res.bestProb).trim() + ' sure, bar ' + pct(res.threshold).trim() : ' relevant enough'));
+    L();
+    const fs2 = require('fs');
+    try { if (fs2.statSync(this.traceFile).size > 5e6) fs2.renameSync(this.traceFile, this.traceFile.replace(/(\.\w+)?$/, '.old$1')); } catch (e) {}
+    fs2.mkdirSync(path.dirname(this.traceFile), { recursive: true });
+    fs2.appendFileSync(this.traceFile, W.join('\r\n') + '\r\n');
   }
 
   _reason(best, mode, req) {

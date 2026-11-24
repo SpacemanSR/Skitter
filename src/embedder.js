@@ -110,6 +110,18 @@ class Embedder {
     return this._loading;
   }
   /* texts: string[] → Float32Array[] (unit length). Batches internally. */
+  /* What the model actually sees for a piece of text: the word-pieces it was cut into (## marks a piece that
+     continues the word before it), whether any were unknown, and whether the text was cut off at the limit. */
+  explain(text) {
+    if (!this.tok) return null;
+    if (!this.tok.inv) { this.tok.inv = []; for (const [t, i] of this.tok.vocab) this.tok.inv[i] = t; }
+    const ids = this.tok.encode(text, MAX_TOKENS);
+    const pieces = ids.map((i) => this.tok.inv[i] || '?');
+    const words = this.tok.basic(text).length;
+    const used = pieces.slice(1, -1);
+    return { pieces, count: ids.length, max: MAX_TOKENS, truncated: ids.length >= MAX_TOKENS,
+      unknown: pieces.filter((p) => p === '[UNK]').length, wordsIn: words, split: used.filter((p) => p.startsWith('##')).length };
+  }
   async embed(texts) {
     if (!this.ready) throw new Error('embedder not ready');
     const out = [];

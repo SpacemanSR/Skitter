@@ -154,6 +154,8 @@ function buildMenu() {
     { label: 'He missed a file. Show him which…', click: showMissedFile },
     { label: 'Choose folders…', click: chooseFolders },
     { label: 'Rebuild index', click: () => engine.call('rescan', { full: true }).catch(() => {}) },
+    { label: 'Keep a search log', type: 'checkbox', checked: !!settings.get('searchLog'), click: (i) => { settings.set('searchLog', i.checked); engine.call('setTrace', { file: traceFile() }).catch(() => {}); } },
+    { label: 'Open search log', enabled: !!settings.get('searchLog'), click: () => { const f = traceFile(); if (f && fs.existsSync(f)) shell.openPath(f); else dialog.showMessageBox({ message: 'No searches logged yet', detail: 'Send Skitter for something and the log will appear at\n' + f }); } },
     { label: 'Open data folder', click: () => shell.openPath(app.getPath('userData')) },
     { type: 'separator' },
     ...(update.state === 'ready' ? [{ label: 'Restart to update to ' + update.version, click: () => setupUpdates.install && setupUpdates.install() }] : []),
@@ -298,6 +300,14 @@ ipcMain.on('gofer:shelf-drop', (_e, id) => {
   log.outcome(p.id, 'dismiss'); engine.call('outcome', { id: p.id, outcome: 'dismiss' }).catch(() => {});
 });
 ipcMain.on('gofer:live', (_e, on) => setLive(!!on));
+
+/* The search log: in the project's logs folder when run from source (npm start), next to his other files when
+   installed. GOFER_TRACE_FILE overrides both. */
+function traceFile() {
+  if (!settings.get('searchLog')) return null;
+  if (process.env.GOFER_TRACE_FILE) return process.env.GOFER_TRACE_FILE;
+  return app.isPackaged ? userFile('searches.log') : path.join(app.getAppPath(), 'logs', 'searches.log');
+}
 
 function rememberProposal(p) {
   proposalPaths.set(p.id, p); if (proposalPaths.size > 200) proposalPaths.delete(proposalPaths.keys().next().value);
@@ -493,7 +503,7 @@ app.whenReady().then(async () => {
 
     context = new Context({ clipboard, shell, helperScript: path.join(__dirname, 'winhelper.ps1'), log: (...a) => log.debug('[ctx]', ...a) });
     engine = new EngineClient();
-    engine.start({ dbFile: userFile('gofer.db'), modelDir: modelDir(),
+    engine.start({ dbFile: userFile('gofer.db'), modelDir: modelDir(), traceFile: traceFile(),
       roots: process.env.GOFER_ROOTS ? process.env.GOFER_ROOTS.split(path.delimiter) : settings.get('roots'), semantic: !!settings.get('semantic'), autoTarget: settings.get('autoTargetPrecision'), maxEmbedChunks: settings.get('maxEmbedChunks') })
       .then((st) => { engineStats = Object.assign(engineStats, st); send('index-progress', st); })
       .catch((e) => log.debug('engine init failed', e.message));

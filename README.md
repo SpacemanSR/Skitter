@@ -40,6 +40,8 @@ main process ── overlay window (canvas creature, preview card)
                                          plus a precision-targeted bar for unassigned trips
 ```
 
+**Search log.** Every search is written in plain English to `searches.log` (right-click › Open search log; `logs\searches.log` in the project folder when run from source): the words looked up, the exact text the meaning model read and the pieces it cut it into, the passages it judged closest with their similarity, and the ranking with the reasons. Untick "Keep a search log" to stop it.
+
 Data lives in `%APPDATA%\Skitter`: `gofer.db`, `settings.json`, `proposals.jsonl` (a readable log of every fetch), `gofer.log`, `models/`.
 
 ## Developing

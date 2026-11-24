@@ -14,6 +14,7 @@ function defaults() {
     autoSettleSec: 20,          // how long you stay in one window before it counts as "working on it"
     autoTargetPrecision: 0.6,   // unassigned trips should be kept at least this often; the bar self-adjusts to meet it
     semantic: true,             // search by meaning (downloads a 23 MB model once, runs locally)
+    searchLog: true,            // write a readable record of every search (searches.log) for checking his work
     presentTimeoutSec: 14,      // how long the card waits before it counts as a soft no
     eyelineFrac: 0.22,          // where on the right edge he sits (fraction of screen height)
     displayId: null,            // which screen he lives on (null = primary)
